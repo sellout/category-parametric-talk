@@ -1,0 +1,1092 @@
+#+title: Category-parametric Programming
+#+author: Greg Pfeil
+#+description: Where and how categorical thinking may help and hinder your Scala.
+#+options: d:(not speakernotes)
+#+drawers: speakernotes
+#+epresent_frame_level: 4
+#+epresent_mode_line: (" @sellout — greg@technomadic.org — Category-parametric Programming                           " (:eval (int-to-string epresent-page-number)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+* Quote!
+
+“Most if not all constructions in category theory are parametric in the underlying category, resulting in a remarkable economy of expression. […] This possibly leads to a new style of programming, which could be loosely dubbed as /category-parametric programming/.”
+#+begin_justifyright
+                                                 ───Ralf Hinze, [[http://www.cs.ox.ac.uk/ralf.hinze/SSGIP10/AdjointFolds.pdf][Adjoint Folds and Unfolds]]
+#+end_justifyright
+
+* Who?
+
+Greg Pfeil
+
+Formation.ai – ML for customer relationships
+
+- Ross Baker (@rossabaker)
+- Kris Nuttycombe (@nuttycom)
+- Paul Snively (@paul＿snively)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:speakernotes:
+Hiring Scala & Haskell devs (and many other roles) – if you find anything in this talk intriguing, you should talk to me about applying. Don’t let this talk dissuade you at all, though – understanding this is by no means a prerequisite for any position we have. (But my co-workers have certainly helped me work through some of these ideas).
+:END:
+
+** Recursion Schemes
+
+[[file:~/Downloads/where_turtles2.jpg]]
+
+:speakernotes:
+So, you may know me from such projects as Matryoshka (there’s a talk tomorrow at noon). And I ported that to Cats, calling it Turtles. The most common question I get now is
+:END:
+
+** +Recursion Schemes+
+
+- andyscott/droste – Andy Scott (@andygscott)
+- vil1/recursion-schemes-cookbook – Valentin Kasas (@ValentinKasas)
+
+:speakernotes:
+Turtles is pretty much kaput. There is a new upstart – Droste – recursion schemes for Cats with dedicated and active maintainers. I’m one of them, but so far inactive. Andy Scott at Stripe is leading it.
+
+I’m also working on a recursion scheme cookbook with one of the organizers(?) (member of the program committee?) here – Valentin Kasas.
+
+But this talk isn’t about recursion schemes. At least not directly. But in a different way, it is, because it’s about everything, because it’s about … Categories!
+:END:
+
+* familiarity calibration
+
+:speakernotes:
+I’m just checking which of these things you may be more-or-less familiar with. So, keep your hands up for any slides you understand at a glance, and put them down for slides you don’t understand. This helps me figure out which other slides I should maybe move through quickly or explain more carefully. If you do find yourself bewildered by the end – that’s /my/ fault, not yours. I will happily sit down with anyone to work through any and all of it. (And you can also find me on the Internet if you think of something after the conference has ended – my Twitter and email are on the bottom of every slide).
+
+There is nothing about not knowing any of these that makes you a “worse” programmer than someone who does know them – different people are introduced to different ideas at different times. So, don’t feel like you /should/ be familiar with these – just
+:END: 
+
+[[file:~/Downloads/calibration.jpg]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** the setup
+
+:speakernotes:
+#+begin_src sbt :tangle project/build.properties
+sbt.version=1.2.3
+#+end_src
+:END:
+
+#+begin_src sbt :tangle build.sbt
+inThisBuild(Seq(
+  scalaOrganization := "org.typelevel",
+  scalaVersion := "2.12.4-bin-typelevel-4",
+  scalacOptions := Seq(
+    "-language:higherKinds",
+    "-Ykind-polymorphism"),
+  libraryDependencies := Seq(
+    "org.typelevel" %% "cats-core"   % "1.3.1",
+    "org.typelevel" %% "cats-effect" % "1.0.0")))
+
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.8")
+#+end_src
+
+#+begin_src scala :tangle CategoryParametric.scala
+import cats.implicits._
+
+package object CategoryParametric {
+#+end_src
+
+#+begin_src scala :tangle Calibration.scala
+package object Calibration {
+#+end_src
+
+:speakernotes:
+This is a literate presentation, so here is everything necessary for the rest of the code in this presentation to compile. There is really just one section of the code that requires dotty (or a Typelevel-branded scalac) – the rest should work fine with a current release of things.
+:END:
+
+** ~kind-projector~
+
+#+begin_src scala
+Either[String, ?]
+
+cats.arrow.FunctionK[List, ?[_]]
+#+end_src
+
+** composition
+
+#+begin_src scala
+def f: Boolean => Char
+def g: String => Boolean
+
+f <<< g
+
+(a: String) => f(g(a))
+#+end_src
+
+** higher-order functions
+
+#+begin_src scala
+
+  def map[A, B](fa: List[A])(f: A => B): List[B]
+
+
+
+  def flatMap[A, B](fa: List[A])(f: A => List[B]): List[B]
+
+#+end_src
+
+** type classes
+
+#+begin_src scala :tangle Calibration.scala
+trait Functor[F[_]] {
+  def map[A, B](fa: F[A])(f: A => B): F[B]
+}
+
+trait Monad[M[_]] extends cats.Applicative[M] {
+  def flatMap[A, B](fa: M[A])(f: A => M[B]): M[B]
+}
+#+end_src
+
+** monoids
+
+#+begin_src scala :tangle Calibration.scala
+trait Monoid[A] {
+  def empty: A
+  def combine(a: A, b: A): A
+}
+#+end_src
+
+:speakernotes:
+I use Cats terminology in this talk, when it comes to the names of traits and types, but it should hopefully be understandable regardless of the terminology you’re familiar with – after all, names don’t matter … right?
+:END:
+
+** categories
+
+#+begin_src scala :tangle Calibration.scala
+trait Category[⟹[_, _]] {
+  def id[A]: A ⟹ A
+  def compose[A, B, C](f: B ⟹ C, g: A ⟹ B): A ⟹ C
+}
+#+end_src
+
+#+begin_src scala :tangle Calibration.scala
+}
+#+end_src
+
+* categories
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Category[⟹[_, _]] {
+  def id[A]: A ⟹ A
+  def compose[A, B, C](f: B ⟹ C, g: A ⟹ B): A ⟹ C
+}
+#+end_src
+
+- objects
+- morphisms between objects
+- that can be composed
+- there is an identity morphism for each object
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** *Scal*
+
+:speakernotes:
+*Scal* is the name we use for the category where the objects are Scala types and the morphisms are Scala functions.
+:END:
+
+#+begin_src scala :tangle CategoryParametric.scala
+implicit val scal: Category[Function1] = new Category[Function1] {
+  def id[A] = Predef.identity
+  def compose[A, B, C](f: B => C, g: A => B) = f.compose(g)
+}
+#+end_src
+
+** *Kleisli*
+
+#+begin_src scala :tangle CategoryParametric.scala
+// from cats.data
+final case class Kleisli[F[_], A, B](run: A => F[B])
+#+end_src
+
+#+begin_src scala :tangle CategoryParametric.scala
+implicit def kleisli[M[_]](implicit M: cats.Monad[M])
+    : Category[Kleisli[M, ?, ?]] =
+  new Category[Kleisli[M, ?, ?]] {
+    def id[A] = Kleisli(M.pure[A])
+    def compose[A, B, C](f: Kleisli[M, B, C], g: Kleisli[M, A, B]) =
+      Kleisli(a => M.flatMap(g.run(a))(f.run))
+}
+#+end_src
+
+* composition
+
+:speakernotes:
+So, looking at the definition of ~Category~, is there anything that’s missing?
+
+Proper values!
+
+The only values we have are the morphisms. And the only thing we can do to them is compose them.
+
+Scala is not great at composition. It expects things to be applied, otherwise you have to provide it with lots of types to tell it what you want.
+:END:
+
+#+begin_src scala
+trait Category[⟹[_, _]] {
+  def id[A]: A ⟹ A
+  def compose[A, B, C](f: B ⟹ C, g: A ⟹ B): A ⟹ C
+}
+#+end_src
+
+# ** “point-free” style
+
+# Since category theory doesn’t operate at the levels of values, this talk will mostly deal with types, and … uh, things like types. However, as mentioned previously, we can really only do one thing when working with categories – compose. This leads to a way of programming called point-free.
+
+# It’s a contentious style. In Haskell, it’s at least common in simple cases. When we get to more complicated cases, it can often be non-obvious what’s happening. I think it’s reasonable for programmers to be on either side of the issue, but if you’re thinking and working categorically, then point-free is the only option.
+
+* Why?
+
+:speakernotes:
+Why do we care about categories?
+
+The same reason we might care about interfaces, or type classes – /abstraction/!
+
+Even if we can’t have a fully abstract implementation, understanding the common abstraction can help us see larger similarities between things.
+
+Category theory is the ultimate abstraction. Everything from every field of mathematics (like, type theory) maps to category theory. Not only can you see how ideas in your particular area relate to each other more clearly, but you can also see how your ideas map to ideas in other branches of mathematics.
+:END:
+
+- Eugenia Cheng – [[https://www.youtube.com/watch?v=cSRVywjDP8E][Category Theory and Life]]
+
+* functors
+
+:speakernotes:
+#+begin_src latex :file functor.pdf :packages '(("" "tikz"))
+\usetikzlibrary{cd}
+\begin{tikzcd}
+A \ar[r, "f"] \ar[d, "F"] & B \ar[d, "F"] \\
+A_F \ar[r, "f_F"] & B_F
+\end{tikzcd}
+#+end_src
+:END:
+
+#+RESULTS:
+[[file:functor.pdf]]
+
+:speakernotes:
+#+begin_src latex :file functor_map.pdf :packages '(("" "tikz"))
+\usetikzlibrary{cd}
+\begin{tikzcd}
+A \ar[r, "f"] \ar[d, "F"] & B \ar[d, "F"] \\
+A_F \ar[r, "map(f)"] & B_F
+\end{tikzcd}
+#+end_src
+:END:
+
+#+RESULTS:
+[[file:functor_map.pdf]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** aligning ~Functor~
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Functor[F[_]] {
+  def map[A, B](fa: F[A])(f: A => B): F[B]
+}
+
+trait Functorʹ[F[_]] {
+  def map[A, B](f: A => B)(fa: F[A]): F[B]
+}
+
+trait Functorʹʹ[F[_]] {
+  def map[A, B](f: A => B): F[A] => F[B]
+}
+#+end_src
+
+** generalizing endofunctors
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Endofunctorʹ[⟹[_, _], F[_]] {
+  def map[A, B](f: A ⟹ B): F[A] ⟹ F[B]
+}
+#+end_src
+
+** … to functors
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Exofunctor[⟹[_, _], ⟾[_, _], F[_]] {
+  def map[A, B](f: A ⟹ B): F[A] ⟾ F[B]
+}
+#+end_src
+
+** endofunctors
+
+#+begin_src scala :tangle CategoryParametric.scala
+type Endofunctor[⟹[_, _], F[_]] = Exofunctor[⟹, ⟹, F]
+
+type Functorʹʹʹ[F[_]] = Endofunctor[Function1, F]
+// `map[A, B](f: A => B): F[A] => F[B]` is `map`
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** ~Traverse~
+
+#+begin_src scala :tangle CategoryParametric.scala
+type Traverse[M[_], F[_]] = Endofunctor[Kleisli[M, ?, ?], F]
+// `map[A, B](f: A => M[B]): F[A] => M[F[B]]` is `traverse`
+
+implicit def optionTraverse[M[_]: Applicative] =
+  new Traverse[M, Option] {
+    def map[A, B](f: Kleisli[M, A, B]) = null
+  }
+
+implicit def idTraverse[M[_]] = new Traverse[M, cats.Id] {
+  def map[A, B](f: Kleisli[M, A, B]) = null
+}
+
+implicit val ioTraverse = new Traverse[cats.Id, cats.effect.IO] {
+  def map[A, B](f: Kleisli[cats.Id, A, B]) = null
+}
+#+end_src
+
+*** unify ~Functor~ and ~Traverse~?
+
+#+begin_src scala :tangle CategoryParametric.scala
+type Functorʹʹʹʹ[F[_]] = Traverse[cats.Id, F]
+// `map[A, B](f: A => Id[B]): F[A] => Id[F[B]]` is `map`
+#+end_src
+
+** exofunctors
+
+#+begin_src scala :tangle CategoryParametric.scala
+type KleisliFunctor[M[_], F[_]] =
+  Exofunctor[cats.data.Kleisli[M, ?, ?], Function1, F]
+
+type FunctorFilter[F[_]] = KleisliFunctor[Option, F]
+// `map[A, B](f: A => Option[B]): F[A] => F[B]` is `mapFilter`
+type FlatMap[F[_]] = KleisliFunctor[F, F]
+// `map[A, B](f: A => F[B]): F[A] => F[B]` is `flatMap`
+#+end_src
+
+#+begin_src scala :tangle CategoryParametric.scala
+type CokleisliFunctor[M[_], F[_]] =
+  Exofunctor[cats.data.Cokleisli[M, ?, ?], Function1, F]
+
+type CoflatMap[F[_]] = CokleisliFunctor[F, F]
+// `map[A, B](f: F[A] => B): F[A] => F[B]` is `coflatMap`
+#+end_src
+
+** duality
+
+
+#+begin_src scala :tangle CategoryParametric.scala
+// from cats.data
+final case class Op[⟹[_, _], A, B](run: B ⟹ A)
+#+end_src
+
+#+begin_src scala :tangle CategoryParametric.scala
+type Presheaf[⟹[_, _], F[_]] = Exofunctor[Op[⟹, ?, ?], ⟹, F]
+
+type Contravariant[F[_]] = Presheaf[Function1, F]
+// `map[A, B](f: B => A): F[A] => F[B]` is `contramap`
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** What category are we in?!
+
+#+begin_src scala
+// from cats.data
+final case class Op[⟹[_, _], A, B](run: B ⟹ A)
+#+end_src
+
+#+begin_src scala
+Op[Kleisli[F, ?, ?], A, B] // (A => F[B]) => (B => F[A])
+Op[Function1, A, F[B]]     // (A => F[B]) => (F[B] => A)
+#+end_src
+
+:speakernotes:
+Duality can be confusing if you don’t know what category you’re working in.
+For example, what is the dual of ~A ⇒ M[B]~?
+If you’re in *Scal*, the category of Scala types, the dual would be ~M[B] ⇒ A~.
+But if you’re in a Kleisli category, then the dual would be ~B ⇒ M[A]~.
+
+I.e., in a Kleisli category, the ~M~ is part of the morphism, in *Scal* it’s part of the object.
+:END:
+
+** subcategories
+
+:speakernotes:
+But … we can’t abstract over the constraint, so we”d have to explicitly create a new morphism type for each set of constraints.
+:END:
+
+#+begin_src scala :tangle CategoryParametric.scala
+final case class OrdFunction1
+  [A: cats.kernel.Order, B: cats.kernel.Order]
+  (run: A => B)
+
+val setFunctor = new Exofunctor[OrdFunction1, Function1, Set] {
+  def map[A, B](f: OrdFunction1[A, B]) = _.map(f.run)
+}
+
+val boolSet: Set[Boolean] =
+  setFunctor.map(
+    OrdFunction1[Int, Boolean](_ % 2 == 0))(
+    Set(0, 1, 2, 3))
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** other /kinds/ of functors
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Exofunctorʹ[⟹[_   , _   ], ⟾[_   , _   ], F[_      ]] {
+  def map[A   , B   ](f: A ⟹ B): F[A   ] ⟾ F[B   ]
+}
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** functors in a functor category
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait ExofunctorK[⟹[_[_], _[_]], ⟾[_[_], _[_]], F[_[_], _]] {
+  def map[A[_], B[_]](f: A ⟹ B): F[A, ?] ⟾ F[B, ?]
+}
+
+type Hoist[F[_[_], _]] =
+  ExofunctorK[cats.arrow.FunctionK, cats.arrow.FunctionK, F]
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** bifunctors
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Bifunctor[⟶[_, _], ⟹[_, _], ⟾[_, _], F[_, _]] {
+  def map[A, B, C, D](f: A ⟶ C, g: B ⟹ D): F[A, B] ⟾ F[C, D]
+}
+type Bifunctorʹ[F[_, _]] =
+  Bifunctor[Function1, Function1, Function1, F]
+// `map[A, B, C, D](f: A => C, g: B => D): F[A, B] => F[C, D]`
+//  is `bimap`
+#+end_src
+
+*** profunctors
+
+#+begin_src scala :tangle CategoryParametric.scala
+type Profunctor[⟶[_, _], ⟹[_, _], F[_, _]] =
+  Bifunctor[cats.data.Op[⟹, ?, ?], ⟶, Function1, F]
+
+type Profunctorʹ[F[_, _]] = Profunctor[Function1, Function1, F]
+// `map[A, B, C, D](f: C => A, g: B => D): F[A, B] => F[C, D]`
+//  is `dimap`
+
+type HomFunctor[⟹[_, _], F[_,_]] =
+  Bifunctor[cats.data.Op[⟹, ?, ?], ⟹, ⟹, F]
+
+type Profunctorʹʹ[F[_, _]] = HomFunctor[Function1, F]
+#+end_src
+
+** What are the problems with this?
+
+- breaks inference
+- often wrapping and unwrapping
+- can make type class inheritance difficult
+- gives us (or at least /me/) a taste of something I want more of
+
+* Monoids
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Monoid[A] {
+  def empty: A
+  def combine(x: A, y: A): A
+}
+
+case class MonoidLaws[A](monoid: Monoid[A]) {
+  def associative(x: A, y: A, z: A) =
+    monoid.combine(monoid.combine(x, y), z) ==
+      monoid.combine(x, monoid.combine(y, z))
+  def leftIdentity(x : A) = monoid.combine(monoid.empty, x) == x
+  def rightIdentity(x : A) = monoid.combine(x, monoid.empty) == x
+}
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** abstract over the category …
+
+:speakernotes:
+~identity~ isn’t a morphism, though. And is ~op~? How can we fix these?
+:END:
+
+#+begin_src scala
+trait Monoidʹʹ[⟹[_, _], A] {
+  def identity: Unit ⟹ A
+  def op: (A, A) ⟹ A
+}
+#+end_src
+
+** but it’s a /monoidal/ category
+
+:speakernotes:
+A monoid in a “monoidal category” is an object with two particular morphisms …
+:END:
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait CMonoid[⟹[_, _], I, ⊗[_, _], A] {
+  def identity: I ⟹ A
+  def op: (A ⊗ A) ⟹ A
+}
+
+type Monoidʹ[A] = CMonoid[Function1, Unit, Tuple2, A]
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** fixing a problem
+
+:speakernotes:
+but this new ~Monoidʹ~ looks a bit different than Cats’ version, right? We have to apply ~identity~ to ~()~, and we have to apply ~ap~ to a single ~Tuple2~, rather than to a pair of arguments. We can always add another wrapper:
+:END:
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait ProperMonoidʹ[A] extends CMonoid[Function1, Unit, Tuple2, A] {
+  def empty: A
+  def combine(a: A, b: A): A
+
+  final def identity = (_: Unit) => empty
+  final def op = (tup: (A, A)) => combine(tup._1, tup._2)
+}
+#+end_src
+
+:speakernotes:
+And now we can define and use the ~Monoid~ we usually want, without losing the generality of ~CMonoid~.
+:END:
+
+*** ~?~ ⇒ ~?[_]~
+
+:speakernotes:
+Now we’re going to talk about a different /kind/ of monoid …
+:END:
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait CMonoidʹ[⟹[_   , _   ], I   , ⊗[_   , _      ], A   ] {
+  def identity: I ⟹ A
+  def op: (A ⊗ A) ⟹ A
+}
+#+end_src
+
+*** ~MonoidK~
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait CMonoidK[⟹[_[_], _[_]], I[_], ⊗[_[_], _[_], _], A[_]] {
+  def identity: I ⟹ A
+  def op: ⊗[A, A, ?] ⟹ A
+}
+#+end_src
+
+*** a monad is “just” …
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Monad[M[_]]
+    extends CMonoidK[cats.arrow.FunctionK,
+                     cats.Id,
+                     cats.data.Nested,
+                     M] {
+  def pure[A](a: A): M[A]
+  def join[A](fa: M[M[A]]): M[A]
+
+  final def identity = λ[cats.arrow.FunctionK[cats.Id, M]](pure(_))
+  final def op =
+    λ[cats.arrow.FunctionK[cats.data.Nested[M, M, ?], M]](
+      a => join(a.value))
+}
+#+end_src
+
+:speakernotes:
+Note that these instances are defined in terms of ~map2~ and ~join~, rather than ~ap~ and ~flatMap~. That’s a trivial issue to get around, though.
+
+What’s more complicated is that we /know/ that every ~Monad~ implies an ~Applicative~, and we usually show that by having ~Monad[M[_]] extends Applicative[M]~, but we have a problem here – ~identity~ matches up, but that would give us two /distinct/ implementations of ~op~!
+:END:
+
+*** and so is ~Applicative~
+
+#+begin_src scala :tangle CategoryParametric.scala
+final abstract class Day[F[_], G[_], C] {
+  type A
+  type B
+  def fa: F[A]
+  def gb: G[B]
+  def f(a: A, b: B): C
+}
+
+trait Applicative[F[_]]
+     extends CMonoidK[cats.arrow.FunctionK, cats.Id, Day, F] {
+  def pure[A](a: A): F[A]
+  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
+
+  final def identity = λ[cats.arrow.FunctionK[cats.Id, F]](pure(_))
+  final def op = λ[cats.arrow.FunctionK[Day[F, F, ?], F]](
+    day => map2(day.fa, day.gb)(day.f))
+}
+#+end_src
+
+** a trick
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:speakernotes:
+I pulled a bit of a trick at the beginnig of this talk, and I wonder if anyone noticed. I’m going to do it again a bit more slowly, and raise your hand if you think you know what the trick is. I haven’t given away the answer yet, but I’ve shown a number of steps that lead to it.
+:END:
+
+*** Monoids
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Monoidʹʹʹ[A] {
+  def empty: A
+  def combine(a: A, b: A): A
+}
+#+end_src
+
+*** Categories
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Categoryʹ[⟹[_, _]] {
+  def id[A]: A ⟹ A
+  def compose[A, B, C](f: B ⟹ C, g: A ⟹ B): A ⟹ C
+}
+#+end_src
+
+
+*** Category as Monoid (preface)
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait MonoidB
+  [⟹[_[_, _], _[_, _]], I[_, _], ⊗[_[_, _], _[_, _], _, _],
+   A[_, _]] {
+  def identity: I ⟹ A
+  def op: ⊗[A, A, ?, ?] ⟹ A
+}
+
+trait FunctionB[F[_, _], G[_, _]] {
+  def apply[A, B](fab : F[A, B]): G[A, B]
+}
+
+final abstract class ComposeB[⟹[_, _], ⟾[_, _], A, B] {
+  type Z
+  def f: Z ⟹ B
+  def g: A ⟾ Z
+}
+#+end_src
+
+*** Category as Monoid
+
+#+begin_src scala :tangle CategoryParametric.scala
+trait Categoryʹʹ[⟹[_, _]]
+    extends MonoidB[FunctionB, cats.evidence.Is, ComposeB, ⟹] {
+  def id[A]: A ⟹ A
+  def compose[A, B, C](f: B ⟹ C, g: A ⟹ B): A ⟹ C
+
+  def identity = new FunctionB[cats.evidence.Is, ⟹] {
+    def apply[A, B](fab : cats.evidence.Is[A, B]) =
+      fab.substitute[A ⟹ ?](id)
+  }
+  // λ[FunctionB[ComposeB[⟹, ⟹, ?, ?], ⟹]](compose(fab.f, fab.g))
+  def op = new FunctionB[ComposeB[⟹, ⟹, ?, ?], ⟹] {
+    def apply[A, B](fab : ComposeB[⟹, ⟹, A, B]) =
+      compose(fab.f, fab.g)
+  }
+}
+#+end_src
+
+:speakernotes:
+B = Bifunctor
+
+But, what is a bifunctor? Different in category theory from Haskell / Scala. The B above is CT-ish, so, basically, any product category.
+:END:
+
+* Kind Polymorphism
+
+:speakernotes:
+Requires Dotty or Typelevel
+
+Thanks to Pascal & Miles.
+:END:
+
+#+begin_src scala
+trait CMonoid
+    [⟹[_, _],
+     I,
+     ⊗[_, _],
+     A] {
+  def identity: I ⟹ A
+  def op: (A ⊗ A) ⟹ A
+}
+#+end_src
+
+#+begin_src scala :tangle KindPoly.scala
+package object KindPoly {
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+** ~AnyKind~
+
+#+begin_src scala :tangle KindPoly.scala
+trait Monoid
+    [⟹[_ <: AnyKind, _ <: AnyKind],
+     I <: AnyKind,
+     ⊗ <: AnyKind, // ⊗[_ <: AnyKind, _ <: AnyKind] <: AnyKind,
+     A <: AnyKind] {
+  def identity: I ⟹ A
+  def op: ⊗ ⟹ A  // def op: (A ⊗ A) ⟹ A
+}
+#+end_src
+
+:speakernotes:
+We’d like to use the commented-out forms, but it isn’t available with the syntax provided by Scala’s kind-polymorphism. This is a weakness, because remember earlier we said that ~⊗~ is a /bifunctor/, but that isn’t enforced by this definition.
+
+We can still define it with bifunctors, but we need to explicitly mention ~A~ twice in the ~⊗~ argument.
+:END:
+
+#+begin_src scala :tangle KindPoly.scala
+type ProperMonoid[A] = Monoid[Function1, Unit, (A, A), A]
+#+end_src
+
+:speakernotes:
+That means we can inadvertantly specify /non/-monoids if we provide a bad ~⊗~ argument.
+:END:
+
+#+begin_src scala :tangle KindPoly.scala
+type FakeMonoid[A] = Monoid[Function1, Unit, List, A]
+#+end_src
+
+:speakernotes:
+is in no way a valid monoid, but it’s not prevented by this definition. So, we /can/ define a kind-polymorphic ~Monoid~, but it means we have to be a /bit/ careful with the definitions.
+
+There’s another problem, in that the operations constrain ~I~ and ~⊗~ to the same kind, and ~⟹~ must match the kinds of ~I~ and ~A~ in its two parameters, but there is nothing saying that the two parameters of ~⟹~ must be of the same kind. But since ~⟹~ is meant to be a morphism in a category, and all objects in a category must be valid on either side of a morphism, the kinds are required to align – but, again, it’s not enforced.
+
+So, by generalizing ~Monoid~ in this way, we’ve managed to unify many type classes
+:END:
+
+** mono ~Monoid~
+:speakernotes:
+But, at least in Scala, we’ve lost some precision. If we are careful about that third parameter, then we should be ok, but there’s a risk.
+:END:
+
+#+begin_src scala
+// Monoid
+type ProperMonoid[A] = Monoid[Function1, Unit, (A, A), A]
+
+// MonoidK
+type MonoidK[F[_]] =
+  Monoid[cats.arrow.FunctionK, cats.Id, cats.data.Tuple2K[F, F, ?],
+         F]
+type Applicative[F[_]] =
+  Monoid[cats.arrow.FunctionK, cats.Id, Day[F, F, ?], F]
+type Monad[M[_]] =
+  Monoid[cats.arrow.FunctionK, cats.Id, cats.data.Nested[M, M, ?],
+         M]
+
+// MonoidB
+type TypeCategory[⟹[_, _]] =
+  Monoid[FunctionB, cats.evidence.Is, ComposeB[⟹, ⟹, ?, ?], ⟹]
+#+end_src
+
+** mono ~Functor~? 🚫
+:speakernotes:
+In the case of a kind-polymorphic functor – I can’t even figure out how to define it. In the first case, we can’t do the nested ~AnyKind~ on a type, and in the second case (using the same sort of trick from ~⊗~), we have no way to apply the ~F~ to ~A~ or ~B~.
+
+There may be some trick I’m unaware of to help with this.
+:END:
+
+#+begin_src scala
+trait Functor
+    [⟹[_ <: AnyKind, _ <: AnyKind],
+     ⟾[_ <: AnyKind, _ <: AnyKind],
+     F[_ <: AnyKind] <: AnyKind] {
+  def map[A <: AnyKind, B <: AnyKind](f: A ⟹ B): F[A] ⟾ F[B]
+}
+
+trait Functor
+    [⟹[_ <: AnyKind, _ <: AnyKind],
+     ⟾[_ <: AnyKind, _ <: AnyKind],
+     F <: AnyKind] {
+  def map[A <: AnyKind, B <: AnyKind](f: A ⟹ B): F ⟾ F
+}
+#+end_src
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*** multiple type parameter lists
+
+https://github.com/scala/bug/issues/4719
+
+#+begin_src scala
+F[_ <: AnyKind] <: AnyKind
+#+end_src
+
+#+begin_src scala
+final case class Tuple2K[F[_], G[_], A](first: F[A], second: G[A])
+#+end_src
+
+#+begin_src scala
+final case class Tuple2K[F[_], G[_]][A](first: F[A], second: G[A])
+#+end_src
+
+#+begin_src scala :tangle KindPoly.scala
+}
+#+end_src
+
+* an exercise …
+
+#+begin_src scala :tangle KindPoly.scala
+trait Category[⟹[_ <: AnyKind, _ <: AnyKind]] {
+  def id[A <: AnyKind]: A ⟹ A
+  def compose[A <: AnyKind, B <: AnyKind, C <: AnyKind]
+    (g: B ⟹ C, f: A ⟹ B)
+      : A ⟹ C
+}
+#+end_src
+
+# * naturality vs. parametricity
+
+#   :speakernotes:
+# http://www.cs.bham.ac.uk/~udr/notes/naturality.pdf
+
+# When dealing with category theory, there is a notion of “naturality”. You /may/ be familiar with the term “natural transformation”, and that is where the “natural” comes from.
+
+# In Cats, there is
+#   :END:
+
+# #+begin_src scala :tangle CategoryParametric.scala
+# sealed trait FunctionK[F[_], G[_]] {
+#   def apply[A](fa: F[A]): G[A]
+# }
+# #+end_src
+
+# :speakernotes:
+# which encodes a natural transformation. It is like ~Function1~, but is a function between type /constructors/ rather than between types. The parametricity of ~A~ ensures that we can’t affect it in any way.
+
+# But there was a subtle distinction between talking about a natural transformation in category theory and talking about ~FunctionK~ in Scala – when talking about the former, I said “naturality”, but when talking about the latter, I said “parametricity”. Are they just the same thing in different lexicons?
+
+# Unfortunately not. It turns out parametricity is a stronger claim than naturality. So, there are natural transformations that can’t be expressed via Cats’ ~FunctionK~. But again, with a bit of hand-waving, it works.
+# :END:
+
+
+* Questions?
+
+#+begin_src scala :tangle CategoryParametric.scala
+}
+#+end_src
+
+Greg Pfeil
+
+Formation.ai – ML for customer relationships
+
+Thanks to
+- Erik Osheim (@d6) for ~kind-projector~,
+- Pascal Voitot (@mandubian) for ~-Ykind-polymorphism~ 
+# and the fun I’ve gotten to have when using it,
+- Miles Sabin (@milessabin) for Typelevel Scala
+# and all his efforts around making FP more feasible in Scala,
+- Rob Norris (@tpolecat)
+ # for putting a bucket over his head every time I went off the rails on something – any remaining Crazy Train in this talk is due to me ignoring him (so be glad I listened as much as I did),
+- Typelevel.org in general
+# for their work in providing a solid base of FP tooling, 
+- Scala.io
+# for having me here to either entice or annoy you with these ideas, and
+- so many others inside and outside the Scala community
+# for helping me understand the things I do – I only hope I can pay it forward
