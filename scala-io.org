@@ -21,13 +21,6 @@
 
 
 
-* Quote!
-
-“Most if not all constructions in category theory are parametric in the underlying category, resulting in a remarkable economy of expression. […] This possibly leads to a new style of programming, which could be loosely dubbed as /category-parametric programming/.”
-#+begin_justifyright
-                                                 ───Ralf Hinze, [[http://www.cs.ox.ac.uk/ralf.hinze/SSGIP10/AdjointFolds.pdf][Adjoint Folds and Unfolds]]
-#+end_justifyright
-
 * Who?
 
 Greg Pfeil
@@ -77,6 +70,13 @@ I’m also working on a recursion scheme cookbook with one of the organizers(?) 
 
 But this talk isn’t about recursion schemes. At least not directly. But in a different way, it is, because it’s about everything, because it’s about … Categories!
 :END:
+
+* Quote!
+
+“Most if not all constructions in category theory are parametric in the underlying category, resulting in a remarkable economy of expression. […] This possibly leads to a new style of programming, which could be loosely dubbed as /category-parametric programming/.”
+#+begin_justifyright
+                                                 ───Ralf Hinze, [[http://www.cs.ox.ac.uk/ralf.hinze/SSGIP10/AdjointFolds.pdf][Adjoint Folds and Unfolds]]
+#+end_justifyright
 
 * familiarity calibration
 
