@@ -1,0 +1,573 @@
+#+title: Duality and How to Delete Half (minus ɛ) of Your Code
+#+author: Greg Pfeil — *Formation*
+#+description: Where and how categorical thinking may help and hinder your Scala.
+#+options: d:(not speakernotes)
+#+drawers: speakernotes
+#+epresent_format_latex_scale: 4
+#+epresent_frame_level: 4y
+#+epresent_hide_outline: t
+#+epresent_mode_line: (" @sellout — greg@technomadic.org — Duality & Delete Your Code                       " (:eval (int-to-string epresent-page-number))) 
+
+[[file:spock.jpg]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+* *Categories* and How to Delete *96%* (minus ɛ) of Your Code
+
+* Who?
+
+Greg Pfeil
+  [[file:FormationLogo.png]]
+
+- Ross Baker ([[https://twitter.com/rossabaker][@rossabaker]])
+- Chris McKinley ([[https://twitter.com/fnowarn][@fnowarn]]) – spoke on Thursday!
+- Kris Nuttycombe ([[https://twitter.com/nuttycom][@nuttycom]])
+- Paul Snively ([[https://twitter.com/paul_snively][@paul_snively]]) – speaking at 3:00 in this room!
+
+:speakernotes:
+Hiring Scala & Haskell devs (and many other roles) – if you find anything in this talk intriguing, you should talk to me about applying. Don’t let this talk dissuade you at all, though – understanding this is by no means a prerequisite for any position we have. (But my co-workers have certainly helped me work through some of these ideas).
+:END:
+
+** Recursion Schemes
+
+[[file:where_turtles.jpg]]
+
+:speakernotes:
+So, you may know me from such projects as Matryoshka (there’s a talk tomorrow at noon). And I ported that to Cats, calling it Turtles. The most common question I get now is
+:END:
+
+- [[https://github.com/andyscott/droste][andyscott/droste]] – Andy Scott ([[https://twitter.com/andygscott][@andygscott]])
+- [[https://github.com/sellout/recursion-schemes-cookbook][vil1/recursion-schemes-cookbook]] – Valentin Kasas ([[https://twitter.com/ValentinKasas][@ValentinKasas]])
+
+:speakernotes:
+Turtles is pretty much kaput. There is a new upstart – Droste – recursion schemes for Cats with dedicated and active maintainers. I’m one of them, but so far inactive. Andy Scott at Stripe is leading it.
+
+I’m also working on a recursion scheme cookbook with one of the organizers(?) (member of the program committee?) here – Valentin Kasas.
+
+But this talk isn’t about recursion schemes. At least not directly. But in a different way, it is, because it’s about everything, because it’s about … Categories!
+:END:
+
+* the build
+
+#+begin_src sbt :tangle build.sbt
+inThisBuild(Seq(
+  scalaOrganization := "org.typelevel",
+  scalaVersion := "2.12.4-bin-typelevel-4",
+  scalacOptions := Seq(
+    "-language:higherKinds",
+    "-Ykind-polymorphism"),
+  libraryDependencies := Seq(
+    "org.typelevel" %% "cats-core" % "1.3.1",
+    "org.typelevel" %% "cats-free" % "1.3.1")))
+
+addCompilerPlugin(
+  "org.spire-math" %% "kind-projector" % "0.9.8")
+#+end_src
+
+* the imports
+
+#+begin_src scala :tangle Recursion.scala
+import cats._
+import cats.arrow._
+import cats.data._
+import cats.free._
+import cats.implicits._
+#+end_src
+
+* of course …
+
+[[file:cata.png]]
+
+** folds
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def cata[A](φ: F[A] => A): T => A
+}
+#+end_src
+
+** folds (example)
+#+begin_src scala :tangle Recursion.scala
+// toInt Zero == 0
+// toInt Succ(Succ(Succ(Zero))) == 3
+sealed trait Natural
+final case object Zero               extends Natural
+final case class Succ(prev: Natural) extends Natural
+
+object Natural {
+  implicit val recursive = new Recursive[Natural, Option] {
+    def cata[A](φ: Option[A] => A) = ???
+  }
+
+  val toInt = recursive.cata[Int] {
+                case None    => 0
+                case Some(i) => i + 1
+              }
+}
+#+end_src
+
+** folds
+
+[[file:cata.png]]
+
+** and unfolds
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def cata[A](φ: F[A] => A): T => A
+}
+
+trait Corecursive[T, F[_]] {
+  def ana[A](φ: A => F[A]): A => T
+}
+#+end_src
+
+** and unfolds
+
+[[file:plus-ana.png]]
+
+** with variations
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def histo[A]
+    (φ: F[Cofree[F, A]] => A)(implicit F: Functor[F])
+      : T => A
+
+  def cata[A]
+    (φ: F[          A ] => A): T => A
+
+  def para[A]
+    (φ: F[(T,       A)] => A)(implicit F: Functor[F])
+      : T => A
+}
+#+end_src
+
+** with variations
+
+[[file:plus-variants.png]]
+
+** and monads
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def  cata[             A]
+    (φ: F[A] =>   A ): T =>   A
+
+  def cataM[M[_]: Monad, A]
+    (φ: F[A] => M[A])(implicit F: Traverse[F])
+      : T => M[A]
+}
+#+end_src
+
+** and monads
+
+[[file:plus-monads.png]]
+
+** and beyond
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+  sealed trait ≈>[F[_, _], G[_, _]] {
+    def apply[A, B](fab: F[A, B]): G[A, B]
+  }
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def cata[A      ]
+    (φ: F[A]       => A): T => A
+}
+trait RecursiveK[T[_], F[_[_], _]] {
+  def cataK[A[_]   ]
+    (φ: F[A, ?]    ~> A): T ~> A
+}
+trait RecursiveB[T[_, _], F[_[_, _], _, _]] {
+  def cataB[A[_, _]]
+    (φ: F[A, ?, ?] ≈> A): T ≈> A
+}
+#+end_src
+
+** and beyond
+
+[[file:plus-kinds.png]]
+
+* Other dimensions
+[[file:tesseract.png]]
+
+:speakernotes:
+Look, at this point, any time I want to add something new, I have to implement like 24 variants of it. This is insane. You know when you look at a library and /expect/ an operation to exist, but it seems to not … so you keep looking, because you /know/ it must be there. This is why it’s not there – someone wants to add a case, they add that case, and leave out the other 23. I mean, even if they could see the pattern through the project, who’s going to implement something 23 times in order to maintain the pattern?
+
+<raises hand> ME!
+
+Yeah, and this is my own curse, I get it. But what if we could avoid implementing it 24 times? Right? Do you think people writing Go ask this question? I mean, this is /why/ we have type parameters, right? We’ve already solved this problem in a bunch of cases. This bugs us enough to fix.
+
+Or have we hit the sweet spot, where we’ve abstracted /just/ enough, but no more?
+:END:
+
+
+:speakernotes:
+Besides the many already covered, there are at least two other dimensions that have come up in working with recursion schemes. We’re not going to cover these today, but I just wanted to point out that even with all of this complication, we’re still dealing with a /simplification/. Duplication looms large.
+:END:
+
+** Elgot
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def para[A](φ: F[(T, A)] => A)(implicit F: Functor[F])
+      : T => A
+
+  def epara[A](φ: (T, F[A]) => A)(implicit F: Functor[F])
+      : T => A
+}
+#+end_src
+
+** comonad transformers
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+final case class EnvT[E, F[_], A](run: (E, F[A]))
+
+trait Recursive[T, F[_]] {
+  def  para[      A]
+    (φ: F[(T,        A)] => A)
+    (implicit F: Functor[F])
+      : T => A
+
+  def paraT[W[_], A]
+    (φ: F[EnvT[T, W, A]] => A)
+    (implicit F: Functor[F], W: Comonad[W])
+      : T => A
+}
+#+end_src
+
+* Getting Back
+
+[[file:plus-kinds.png]]
+
+:speakernotes:
+So look at this. It’s a mess – this kind of thing used to make me feel ill. But I’ve found a bunch of ways to bring it back under control!
+:END:
+
+** comonadic folds
+
+:speakernotes:
+The first step is plain-ol’ Scala. Nothing tricky here –
+:END:
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def histo[A]
+    (φ: F[Cofree[F, A]] => A)(implicit F: Functor[F])
+      : T => A
+
+  def cata[A]
+    (φ: F[          A ] => A)
+      : T => A
+
+  def para[A]
+    (φ: F[(T,       A)] => A)(implicit F: Functor[F])
+      : T => A
+}
+#+end_src
+
+** comonadic folds
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  type Compose[F[_], G[_], A] = F[G[A]]
+
+  def gcata[W[_]: Comonad, A]
+    (k: Compose[F, W, ?] ~> Compose[W, F, ?],
+     φ: F[W[A]] => A)
+      : T => A
+
+  def cata[A](φ: F[A] => A) =
+    gcata[Id, A](FunctionK.id, φ)
+  def histo[A]
+    (φ: F[Cofree[F, A]] => A)(implicit F: Functor[F]) =
+    gcata[Cofree[F, ?], A](distCofree, φ)
+  def para[A](φ: F[(T, A)] => A) =
+    gcata[(T, ?), A](distTuple, φ)
+
+  def distCofree
+      : Compose[F, Cofree[F, ?], ?] ~> Compose[Cofree[F, ?], F, ?] = ???
+  def distTuple: Compose[F, (T, ?), ?] ~> Compose[(T, ?), F, ?] = ???
+}
+#+end_src
+
+** comonadic folds
+
+[[file:plus-kinds.png]]
+
+** comonadic folds
+
+[[file:minus-variants.png]]
+
+** comonadic folds
+
+[[file:reorg.png]]
+
+** categories
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def cata[A](φ: F[A] => A): T => A
+
+  def cataM[M[_]: Monad, A]
+    (φ: F[A] => M[A])(implicit F: Traverse[F])
+      : T => M[A]
+}
+#+end_src
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_, _], T, F[_]] {
+  def  cata[A](φ: F[A] ⟶ A): T ⟶ A
+}
+object category {
+  type Recursiveʹ[T, F[_]] = Recursive[Function1, T, F]
+  type RecursiveM[M[_], T, F[_]] =
+    Recursive[Kleisli[M, ?, ?], T, F]
+}
+#+end_src
+
+** categories
+
+[[file:reorg.png]]
+
+** categories
+
+[[file:minus-monads.png]]
+
+** duality
+:speakernotes:
+Now that we have a category abstraction, we can add another category … ~Op~.
+:END:
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[T, F[_]] {
+  def cata[A](φ: F[A] => A): T => A
+}
+trait Corecursive[T, F[_]] {
+  def  ana[A](φ: A => F[A]): A => T
+}
+#+end_src
+
+#+begin_src scala
+type Op[⟶[_, _], A, B] = B ⟶ A
+
+// A => B ⟷ Function1[A, B]
+// B => A ⟷ Op[Function1, A, B]
+#+end_src
+
+** duality
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_, _], T, F[_]] {
+  def cata[A](φ: F[A] ⟶ A): T ⟶ A
+}
+object dual {
+  type Corecursive[⟶[_, _], T, F[_]] =
+    Recursive[Op[⟶, ?, ?], T, F]
+}
+#+end_src
+
+:speakernotes:
+But we now have a problem with naming …
+:END:
+
+** duality
+
+[[file:minus-monads.png]]
+
+** duality
+
+[[file:minus-duals.png]]
+
+** kind polymorphism
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_, _], T, F[_]] {
+  def  cata[A      ](φ: F[A]       ⟶ A): T ⟶ A
+}
+
+trait RecursiveK[⟶[_[_], _[_]], T[_], F[_[_], _]] {
+  def cataK[A[_]   ](φ: F[A, ?]    ⟶ A): T ⟶ A
+}
+
+trait RecursiveB[⟶[_[_, _], _[_, _]], T[_, _], F[_[_, _], _, _]] {
+  def cataB[A[_, _]](φ: F[A, ?, ?] ⟶ A): T ⟶ A
+}
+#+end_src
+
+** kind polymorphism
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_, _], T, F[_]] {
+  def  cata[A      ](φ: F[A]       ⟶ A): T ⟶ A
+}
+#+end_src
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_ <: AnyKind, _ <: AnyKind],
+                T <: AnyKind,
+                F[_ <: AnyKind] <: AnyKind] {
+  def cata[A <: AnyKind](φ: F[A] ⟶ A): T ⟶ A
+}
+#+end_src
+
+** kind polymorphism
+
+[[file:minus-duals.png]]
+
+** kind polymorphism
+   
+[[file:cata.png]]
+
+** abstraction
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+package shadow {
+#+end_src
+:end:
+#+begin_src scala :tangle Recursion.scala
+trait Recursive[⟶[_ <: AnyKind, _ <: AnyKind],
+                ⟹[_ <: AnyKind, _ <: AnyKind],
+                P[_ <: AnyKind, _ <: AnyKind, _ <: AnyKind],
+                T <: AnyKind,
+                F[_ <: AnyKind] <: AnyKind] {
+  def gcata[W[_ <: AnyKind] <: AnyKind, A <: AnyKind]
+    (k: P[F, W, ?] ⟹ P[W, F, ?], φ: F[A] ⟶ A)
+      : T ⟶ A
+}
+#+end_src
+
+* problems
+
+- compiler support
+- type inference
+- library support
+- compile-time cost
+- cognitive load
+
+
+* all you need
+
+[[file:cata.jpg]]
+
+* Thanks to …
+
+:speakernotes:
+#+begin_src scala :tangle Recursion.scala
+}}}}}}}}}}}}}}}}}
+#+end_src
+:end:
+
+- Formation ([[https://twitter.com/formation_ai][@formation_ai]]),
+- Erik Osheim ([[https://twitter.com/d6][@d6]]) for ~kind-projector~,
+- Pascal Voitot ([[https://twitter.com/mandubian][@mandubian]]) for ~-Ykind-polymorphism~,
+# and the fun I’ve gotten to have when using it,
+- Miles Sabin ([[https://twitter.com/milessabin][@milessabin]]) for Typelevel Scala,
+# and all his efforts around making FP more feasible in Scala,
+- Rob Norris ([[https://twitter.com/tpolecat][@tpolecat]]),
+ # for putting a bucket over his head every time I went off the rails on something – any remaining Crazy Train in this talk is due to me ignoring him (so be glad I listened as much as I did),
+- Typelevel.org in general,
+# for their work in providing a solid base of FP tooling, 
+- Scale and Alexy Khrabrov ([[https://twitter.com/ChiefScientist][@ChiefScientist]]), and
+# for having me here to either entice or annoy you with these ideas, and
+- so many others inside and outside the Scala community.
+# for helping me understand the things I do – I only hope I can pay it forward
+
+[[https://github.com/sellout/category-parametric-talk/blob/master/scale/README.org][sellout/category-parametric-talk – scale]]
