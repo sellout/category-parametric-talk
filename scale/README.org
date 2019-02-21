@@ -4,7 +4,7 @@
 #+options: d:(not speakernotes)
 #+drawers: speakernotes
 #+epresent_format_latex_scale: 4
-#+epresent_frame_level: 4y
+#+epresent_frame_level: 4
 #+epresent_hide_outline: t
 #+epresent_mode_line: (" @sellout — greg@technomadic.org — Duality & Delete Your Code                       " (:eval (int-to-string epresent-page-number))) 
 
