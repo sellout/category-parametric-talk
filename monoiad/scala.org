@@ -1,0 +1,752 @@
+#+title: The Monoiad
+an epic journey through monoids
+#+epresent_frame_level: 4
+#+epresent_mode_line: (" @sellout — The Monoiad: an epic journey through monoids                               " (:eval (int-to-string epresent-page-number))) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:speakernotes:
+mono+oid means one … oid. or maybe “one noid”?
+
+*TODO*:
+- compile this
+- show large graph of algebraic structures, then zoom in to monoid
+  - monoid is kind of the powerhouse – massive strength to weight ratio, very common, not too complex, but has enough laws to be interesting.
+:END:
+
+* preface
+
+Greg Pfeil
+
+  [[file:~/Downloads/FormationLogo.png]]
+- Ross Baker ([[https://twitter.com/rossabaker][@rossabaker]])
+- Kris Nuttycombe ([[https://twitter.com/nuttycom][@nuttycom]])
+- Paul Snively ([[https://twitter.com/paul_snively][@paul_snively]])
+
+:speakernotes:
+Hiring Scala & Haskell devs (and many other roles) – if you find anything in this talk intriguing, you should talk to me about applying. Don’t let this talk dissuade you at all, though – understanding this is by no means a prerequisite for any position we have. (But my co-workers have certainly helped me work through some of these ideas).
+:END:
+
+** resources
+
+- this talk – https://github.com/sellout/category-parametric-talk/monoiad/
+- Cheshire – https://github.com/sellout/cheshire
+
+** boilerplate
+
+#+begin_src scala :tangle build.sbt
+inThisBuild(Seq(
+  scalaOrganization := "org.typelevel",
+  scalaVersion := "2.12.4-bin-typelevel-4",
+  scalacOptions := Seq(
+    "-language:higherKinds"),
+  libraryDependencies := Seq(
+    "org.typelevel" %% "cats-core" % "1.3.1",
+    "org.typelevel" %% "spire"     % "0.16.0")))
+addCompilerPlugin(
+  "org.spire-math" %% "kind-projector" % "0.9.8")
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+import cats.{Functor}
+import cats.implicits._
+import scala.{Function1}
+import spire.math.{Natural}
+
+package object monoiad {
+#+end_src
+
+* The Monoiad
+
+*monoid*: a category with a single object
+
+*-ad*: an epic poem, usually with a cyclical journey of discovery
+
+*monad*: a monoid in the category of endofunctors
+
+* /in media res/
+
+#+begin_src scala
+val nums = [8, 2, 4, 5, -2, 8, 3]
+fold(nums)
+
+⇒     -2
+⇒      8
+⇒     28
+⇒ -15360
+#+end_src
+
+** where do these answers come from?
+
+#+begin_src scala
+nums.foldLeft(Int.MaxValue)(min)
+nums.foldLeft(Int.MinValue)(max)
+nums.foldLeft(0)(_ + _)
+nums.foldLeft(1)(_ * _)
+#+end_src
+
+* What’s a monoid?
+
+** in abstract algebra
+
+#+begin_src scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: A
+}
+#+end_src
+
+** in abstract algebra
+
+#+begin_src scala :tangle Monoiad.scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: A
+
+  def associativity(x: A, y: A, z: A): Boolean =
+    product(product(x, y), z) == product(x, product(y, z))
+  def leftIdentity(x: A): Boolean =
+    product(unit, x) == x
+  def rightIdentity(x: A): Boolean =
+    product(x, unit) == x
+}
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+def fold[A](as: List[A])(implicit A: Monoid[A]) =
+  as.foldLeft(A.unit)(A.product(_, _))
+#+end_src
+
+:speakernotes:
+where the product is closed (total), associative, and the unit is both the left and right identity of the product
+
+Ok, that’s everything. You totally get monoids now. Thanks for coming.
+:END:
+
+*** Some examples?
+
+**** ~Boolean~
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val conjunctionMonoid =
+  new Monoid[Boolean] {
+    def product(a: Boolean, b: Boolean) = a && b
+    def unit = true
+  }
+// true && (false && true) == false == (true && false) && true
+// false && true == false == true && false
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val disjunctionMonoid =
+  new Monoid[Boolean] {
+    def product(a: Boolean, b: Boolean) = a || b
+    def unit = false
+  }
+// true || (false || true) == true == (true || false) || true
+// true || false == true == false || true
+#+end_src
+
+**** ~Int~
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val additiveMonoid =
+  new Monoid[Int] {
+    def product(a: Int, b: Int) = a + b
+    def unit = 0
+  }
+// 4 + (2 + 3) == 9 == (4 + 2) + 3
+// 7 + 0 == 7 == 0 + 7
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val multiplicativeMonoid =
+  new Monoid[Int] {
+    def product(a: Int, b: Int) = a * b
+    def unit = 1
+  }
+// 4 * (2 * 3) == 24 == (4 * 2) * 3
+// 7 * 1 == 7 == 1 * 7
+#+end_src
+
+**** ~Int~ (continued)
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val joinMonoid =
+  new Monoid[Int] {
+    def product(a: Int, b: Int) = a max b
+    def unit = Int.MinValue
+  }
+// 12.max(7.max(32)) == 32 == 12.max(7).max(32)
+// 26.max(Int.MinValue) == 26 == Int.MinValue.max(26)
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val meetMonoid =
+  new Monoid[Int] {
+    def product(a: Int, b: Int) = a min b
+    def unit = Int.MaxValue
+  }
+// 12.min(7.min(32)) == 7 == 12.min(7).min(32)
+// 26.min(Int.MaxValue) == 26 == Int.MaxValue.min(26)
+#+end_src
+
+**** ~String~
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val concatenationMonoid =
+  new Monoid[String] {
+    def product(a: String, b: String) = a ++ b
+    def unit = ""
+  }
+// "mon" ++ ("oi" ++ "ad") == "monoiad" == ("mon" ++ "oi") ++ "ad"
+// "foo" ++ "" == "foo" == "" ++ "foo"
+#+end_src
+
+*** generalizing
+
+    :speakernotes:
+So, all of these things fit that ~trait~ I put up before, but let’s take a step back.
+
+A ⊗ A → A
+η → A
+
+∀x, y, z ∈ A
+(x ⊗ y) ⊗ z ≅ x ⊗ (y ⊗ z)
+η ⊗ x ≅ x ≅ x ⊗ η
+
+(a, ⊗, μ)
+    :END:
+
+:speakernotes:
+This definition is a bit more abstract, and so maybe it can help us think of cases that aren’t /quite/ instances of that type class.
+
+And we weaken the equality of our laws to /isomorphism/. And what is isomorphism?
+:END:
+
+#+begin_src scala :tangle Monoiad.scala
+Iso[String, List[Char]](_.toList)(_.mkString(""))
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+"monoiad" != ['m', 'o', 'n', 'o', 'i', 'a', 'd']
+#+end_src
+
+*** now we can do this …
+
+#+begin_src scala :tangle Monoiad.scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: A
+
+  def associativity(x: A, y: A, z: A): Boolean =
+    product(product(x, y), z) == product(x, product(y, z))
+  def leftIdentity(x: A): Boolean =
+    product(unit, x) == x
+  def rightIdentity(x: A): Boolean =
+    product(x, unit) == x
+}
+#+end_src
+
+*** at the type level
+
+#+begin_src scala :tangle Monoiad.scala
+trait TMonoid {
+  type Product[_, _]
+  type Identity
+
+  def associativity[A, B, C]
+      : Product[Product[A, B], C] => Product[A, Product[B, C]]
+  def leftIdentity[A]
+      : Product[Identity, A] => A
+  def rightIdentity[A]
+      : Product[A, Identity] => A
+}
+#+end_src
+
+*** at the type level
+
+#+begin_src scala :tangle Monoiad.scala
+final class Cartesian extends TMonoid {
+  type Product[A, B] = (A, B)
+  type Identity = Unit
+
+  def associativity[A, B, C]: ((A, B), C) => (A, (B, C)) = ???
+  def leftIdentity[A]: (Unit, A) => A = _._2
+  def rightIdentity[A]: (A, Unit) => A = _._1
+}
+#+end_src
+
+*** at the type level
+
+#+begin_src scala :tangle Monoiad.scala
+final class Cocartesian extends TMonoid {
+  type Product[A, B] = Either[A, B]
+  type Identity = Nothing
+
+  def associativity[A, B, C]
+      : Either[Either[A, B], C] => Either[A, Either[B, C]] = ???
+  def leftIdentity[A]: Either[Nothing, A] => A = ???
+  def rightIdentity[A]: Either[A, Nothing] => A = ???
+}
+#+end_src
+
+** in category theory
+
+#+begin_src scala :tangle Monoiad.scala
+trait Category[⟶[_, _]] {
+  def compose[A, B, C](f: B ⟶ C, g: A ⟶ B): A ⟶ C
+  def identity[A]: A ⟶ A
+}
+#+end_src
+
+#+begin_src scala :tangle Monoiad.scala
+implicit val setCategory = Category[Function1] {
+  def compose[A, B, C](f: B => C, g: A => B): A => C =
+    (x: A) => f(g(x))
+  def identity[A]: A => A = (x: A) => x
+}
+#+end_src
+
+*** a category with one object
+
+[[file:context.png]]
+
+*** monoid object in a monoidal category
+
+**** monoids all the way down
+
+     :speakernotes:
+Let’s take a step back to (*, Tuple2, Unit) and our original type class definition:
+     :END:
+
+#+begin_src scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: A
+}
+#+end_src
+
+**** monoids all the way down
+
+     :speakernotes:
+but now let’s use the “proper” definition I mentioned …
+     :END:
+
+#+begin_src scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: Unit => A
+}
+#+end_src
+
+**** monoids all the way down
+
+     :speakernotes:
+and tweak it once more …
+     :END:
+
+#+begin_src scala
+trait Monoid[A] {
+  def product: (A, A) => A
+  def unit: Unit => A
+}
+#+end_src
+
+**** monoids all the way down
+
+     :speakernotes:
+and tweak it once more …
+     :END:
+
+#+begin_src scala
+trait Monoid[A] {
+  def product: (A, A) => A
+  def unit: Unit => A
+}
+#+end_src
+
+#+begin_src scala
+final class Cartesian extends TMonoid {
+  type Product[A, B] = (A, B)
+  type Identity = Unit
+}
+#+end_src
+
+
+**** monoids all the way down
+
+    :speakernotes:
+Do you notice anything?
+
+The argument to each function is respectively the ~Product~ and ~Unit~ of our type-level ~Cartesian~ instance.
+
+So, we can make that explicit …
+    :END:
+
+#+begin_src scala :tangle Monoiad.scala
+trait Monoid[T <: TMonoid, A] {
+  def product: T#Product[A, A] => A
+  def unit: T#Identity => A
+}
+
+implicit val conjunction = new Monoid[Cartesian, Boolean] {
+  def product: (Boolean, Boolean) => Boolean = p => p._1 && p._2
+  def unit: Unit => Boolean = Function1.const True
+}
+
+implicit def cocartesian[A] = new Monoid[Cocartesian, A] {
+  def product: Either[A, A] => A = {
+    case Left(a) => a
+    case Right(a) => a
+  }
+  def unit: Nothing => A = scala.Predef.identity
+}
+#+end_src
+
+:speakernotes:
+So now we have some notion of “a monoid object in a type-level monoid”, yeah?
+:END:
+
+**** categories
+
+#+begin_src scala :tangle Monoiad.scala
+trait Category[⟶[_, _]] {
+  def compose[A, B, C](f: B ⟶ C, g: A ⟶ B): A ⟶ C
+  def identity[A]: A ⟶ A
+}
+#+end_src
+
+**** monoidal categories
+
+#+begin_src scala :tangle Monoiad.scala
+trait MonoidalCategory {
+  type Arrow[_, _]
+  type Product[_, _]
+  type Identity
+}
+#+end_src
+
+**** monoid object in a monoidal category
+
+#+begin_src scala :tangle Monoiad.scala
+trait Monoid[T <: MonoidalCategory, A] {
+  def product: T#Arrow[T#Product[A, A], A]
+  def unit: T#Arrow[T#Identity, A]
+}
+
+implicit val conjunction = new Monoid[Cartesian, Boolean] {
+  def product = (p: (Boolean, Boolean)) => p._1 && p._2
+  def unit = Function1.const true
+}
+
+implicit def cocartesian[A] = new Monoid[Cocartesian, A] {
+  def product = {
+    case Left(a) => a
+    case Right(a) => a
+  }
+  def unit = scala.Predef.identity
+}
+#+end_src
+
+*** other monoidal categories
+
+**** ~Op~
+
+#+begin_src scala :tangle Monoiad.scala
+final class Op[T <: MonoidalCategory] extends MonoidalCategory {
+  type Arrow[A, B] = T#Arrow[B, A]
+  type Product[A, B] = T#Product[A, B]
+  type Identity = T#Identity
+}
+
+implicit def comonoid[A] = new Monoid[Op[Cartesian], A] {
+  def product: A => (A, A) = x => (x, x)
+  def unit: A => Identity = Function1.const ()
+}
+#+end_src
+
+:speakernotes:
+This is mostly useful in a language with linear types. So, a comonoid (or in general, any co-thing) is a monoid in the opposite (or dual) category.
+:END:
+
+**** type constructors
+
+     :speakernotes:
+Unfortunately, Scala doesn’t make it easy to abstract over all of these things, but we can use some consistent naming to approximate it.
+
+- ([*] → *, cats.data.Compose, cats.Identity)
+
+Compose[F[_], G[_], A] ≅ F[G[A]]
+Identity[A] ≅ A
+
+Compose[Compose[List, Set, ?], Maybe, ?] ≅ Compose[List, Compose[Set, Maybe, ?], ?] // ≅ List[Set[Maybe[A]]]
+Compose[Identity, List, ?] ≅ List ≅ Compose[List, Identity, ?]
+     :END:
+
+
+#+begin_src scala :tangle Monoiad.scala
+trait TMonoidF {
+  type Product[_[_], _[_], _]
+  type Identity[_]
+}
+#+end_src
+
+:speakernotes:
+We will stare at this slide for a while … maybe bounce between it and ~TMonoid~ a few times to understand the parallel.
+:END:
+
+#+begin_src scala :tangle Monoiad.scala
+final class Monadic extends TMonoidF {
+  type Product[F[_], G[_], A] = cats.data.Nested[F, G, A]
+  type Identity[A] = cats.data.Id[A]
+}
+
+// Nested[Id, F, ?] =:= F =:= Nested[F, Id, ?]
+//         Id[F[_]] =:= F =:= F[Id[_]]
+#+end_src
+
+*** ~Monad~
+
+“a monad is a monoid in the category of endofunctors”
+
+#+begin_src scala :tangle Monoiad.scala
+trait MonoidalCategoryF {
+  type Arrow[_[_], _[_]]
+  type Product[_[_], _[_], _]
+  type Identity[_]
+}
+trait MonoidF[C <: MonoidalCategoryF, F[_]] {
+  def product: C#Arrow[C#Product[F, F, ?], F]
+  def unit: C#Arrow[C#Identity, F]
+}
+type Monad[M[_]] = MonoidF[Monadic, M]
+// def product: M[M[A]] => M[A] // join
+// def unit: Id[A] => M[A]      // pure
+
+def flatMap[M[_]: Functor: Monad, A, B](ma: M[A])(f: A => M[B]) =
+  ma.map(f).product
+#+end_src
+
+:speakernotes:
+And here, we’ll have to specialize ~MonoidF~ to ~Monad~, and then show how ~flatMap~ can be implemented … and explain why we get ~map~ “for free”.
+:END:
+
+* Why do we care?
+
+- widely applicable laws
+- concurrency
+
+* Too Many Monoids!
+
+  :speakernotes:
+They’re easy to create out of thin air.
+  :END:
+
+#+begin_src scala :tangle Monoiad.scala
+def firstExcept[A: cats.Eq](exception: A) =
+  new Monoid[Cartesian, A] {
+    def op = (a, b) => if (a === exception) then b else a
+    def identity = exception
+  }
+
+def lastExcept[A: cats.Eq](exception: A) =
+  new Monoid[Cartesian, A] {
+    def op = (a, b) => if (b === exception) then a else b
+    def identity = exception
+  }
+#+end_src
+
+:speakernotes:
+Basically, anything you might pass to ~foldRight~.
+:END:
+
+** “strengthening” monoids
+
+   :speakernotes:
+#+begin_src dot :file monoids.png
+digraph "" {
+  rankdir=BT
+  bgcolor=transparent
+
+  Monoid [style=bold]
+
+  Semigroup -> magma
+  quasigroup -> magma [color=orange]
+  loop -> quasigroup [color=red]
+  CommutativeSemigroup -> Semigroup [color=blue]
+  Monoid -> Semigroup [color=red]
+  Band -> Semigroup [color=purple]
+  CommutativeMonoid -> CommutativeSemigroup [color=red]
+  CommutativeMonoid -> Monoid [color=blue]
+  Semilattice -> CommutativeSemigroup [color=purple]
+  Semilattice -> Band [color=blue]
+  Group -> Monoid [color=orange]
+  Group -> loop
+  CommutativeGroup -> Group [color=blue]
+  CommutativeGroup -> CommutativeMonoid [color=orange]
+  BoundedSemilattice -> Semilattice [color=red]
+  BoundedSemilattice -> CommutativeMonoid [color=purple]
+}
+#+end_src
+   :END:
+
+#+RESULTS:
+[[file:monoids.png]]
+
+- associativity – black
+- identity – red
+- commutativity – ~+~, ~*~, ~max~ (but not String concatenation) – blue
+- idempotency – ~max~, ~mix~ (but not ~+~, ~*~) – purple
+- invertible – ~+~ for ℤ (but not for ℕ) – orange
+
+** relating monoids
+
+   :speakernotes:
+As we’ve already seen, you often have multiple instances for a single type. This is a pretty contentious aspect of type classes. There are a number of approaches for dealing with this, and I’m not here to advocate for any of them in particular. But I /am/ here to show that they’re not just “different” instances, but rather a set of instances that have particular relationshps to each other.
+   :END:
+
+** ~algebra.Rig~
+
+   :speakernotes:
+A ring without “negation” (i.e., no subtraction)
+   :END:
+
+#+begin_src scala :tangle Monoiad.scala
+trait TRig {
+  type Add[_, _]
+  type Zero
+  type Multiply[_, _]
+  type One
+
+  final class Additive extends TMonoid {
+    type Product[A, B] = Add[A, B]
+    type Identity = Zero
+  }
+  final class Multiplicative extends TMonoid {
+    type Product[A, B] = Multiply[A, B]
+    type Identity = One
+  }
+#+end_src
+
+** ~algebra.Rig~
+
+#+begin_src scala :tangle Monoiad.scala
+  def distribute[A, B, C]
+      : Multiply[A, Add[B, C]]
+        => Add[Multiply[A, B], Multiply[A, C]]
+  def leftAnnihilate[A]: Multiply[Zero, A] => Zero
+  def rightAnnihilate[A]: Multiply[A, Zero] => Zero
+}
+
+trait RigCategory extends TRig {
+  type Arrow[_, _]
+}
+#+end_src
+
+*** *Set*
+
+#+begin_src scala :tangle Monoiad.scala
+final class SetCategory extends RigCategory {
+  type Arrow[A, B] = Function1[A, B]
+  type Add[A, B] = Either[A, B]
+  type Zero = Nothing
+  type Multiply[A, B] = (A, B)
+  type One = Unit
+
+  def distribute[A, B, C]: (A, Either[B, C]) => Either[(A, B), (A, C)] = {
+    case (a, Left(b)) => Left((a, b))
+    case (a, Right(c)) => Right((a, c))
+  }  
+  def leftAnnihilate[A]: (Nothing, A) => Nothing = _._1
+  def rightAnnihilate[A]: (A, Nothing) => Nothing = _._2
+}
+#+end_src
+
+** ~algebra.BoundedLattice~
+
+   :speakernotes:
+A pair of bounded semilattices, where each distributes over the other, and each identity annihilates the other. You can actually extract two rigs out of this – one each with the meet and join being either position.
+   :END:
+
+#+begin_src scala :tangle Monoiad.scala
+trait BoundedLattice[C <: MonoidalCategory, L] {
+  def meet: C#Arrow[C#Product[L, L], L]
+  def minimum: C#Arrow[C#Identity, L]
+  def join: C#Arrow[C#Product[L, L], L]
+  def maximum: C#Arrow[C#Identity, L]
+
+  final class Meet extends TMonoid {
+    def op = meet
+    def identity = maximum
+  }
+  final class Join extends TMonoid {
+    def op = join
+    def identity = minimum
+  }
+}
+#+end_src
+
+** etc.
+- duoids
+- bimonoids
+- meadow
+- tropical semiring
+- boolean algebra(?)
+
+* and back home again
+
+#+begin_src scala :tangle Monoiad.scala
+trait Category[⟶[_, _]] {
+  def compose[A, B, C](f: B ⟶ C, g: A ⟶ B): A ⟶ C
+  def identity[A]: A ⟶ A
+}
+#+end_src
+
+#+begin_src scala
+trait Monoid[A] {
+  def product(x: A, y: A): A
+  def unit: A
+}
+#+end_src
+
+* Summary
+
+#+begin_src scala :tangle Monoiad.scala
+}
+#+end_src
+
+- a monoid is some closed associative operation with an identity
+- monoids show up everywhere (and way too often)
+- we can best understand “important” monoids in terms of
+  - what additional properties they have
+  - how they relate to other monoids
+- monoids are often hidden behind other interpretations
+
+* Thanks!
+
+- Nathan Faubion for the typo that led to the name/structure of this talk.
+- Erik Osheim (@non), for kind-projector, algebra, and spire
+- Andrey Mokhov – for his work on algebraic graphs and united monoids, which has been very inspirational
+   https://blogs.ncl.ac.uk/andreymokhov/united-monoids/
+
+** References
+
+- Functional Programming in Scala
+- this talk – https://github.com/sellout/category-parametric-talk/monoiad/
+- Cheshire – https://github.com/sellout/cheshire
+- Seven Sketches in Compositionality
+- nLab – https://ncatlab.org/nlab

@@ -1,0 +1,983 @@
+#+title: The Monoiad
+an epic journey through monoids
+#+epresent_frame_level: 4
+#+epresent_mode_line: (" @sellout — The Monoiad: an epic journey through monoids                               " (:eval (int-to-string epresent-page-number))) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:speakernotes:
+mono+oid means one … oid. or maybe “one noid”?
+
+*TODO*:
+- compile this
+- show large graph of algebraic structures, then zoom in to monoid
+  - monoid is kind of the powerhouse – massive strength to weight ratio, very common, not too complex, but has enough laws to be interesting.
+:END:
+
+* preface
+
+Greg Pfeil
+
+[[file:~/Downloads/FormationLogo.png]]
+
+(right here)
+
+:speakernotes:
+Hiring Scala & Haskell devs (and many other roles) – if you find anything in this talk intriguing, you should talk to me about applying. Don’t let this talk dissuade you at all, though – understanding this is by no means a prerequisite for any position we have. (But my co-workers have certainly helped me work through some of these ideas).
+:END:
+
+** resources
+
+- this talk – https://github.com/sellout/category-parametric-talk/monoiad/
+- Caterwaul – https://github.com/sellout/caterwaul
+- Cheshire – https://github.com/sellout/cheshire
+
+** boilerplate
+
+#+begin_src haskell-cabal :tangle monoiad.cabal
+name:                 monoiad
+version:              0.1.0.0
+build-type:           Simple
+cabal-version:        >=1.10
+
+library
+  exposed-modules:    Monoiad
+                    , Monoiad.Isomorphic
+                    , Monoiad.Category
+                    , Monoiad.Instances.Add, Monoiad.Instances.Cartesian, Monoiad.Instances.CatCartesian, Monoiad.Instances.CatCocartesian, Monoiad.Instances.Cocartesian, Monoiad.Instances.Conjunction, Monoiad.Instances.Disjunction, Monoiad.Instances.First, Monoiad.Instances.Last, Monoiad.Instances.Max, Monoiad.Instances.Min, Monoiad.Instances.Multiply
+#+end_src
+
+** boilerplate
+
+#+begin_src haskell-cabal :tangle monoiad.cabal
+  default-extensions: AllowAmbiguousTypes,    ConstraintKinds
+                    , ExistentialQuantification, FlexibleContexts
+                    , FlexibleInstances,      InstanceSigs
+                    , LambdaCase,             MultiParamTypeClasses
+                    , PolyKinds,              RankNTypes
+                    , TypeFamilies,           TypeOperators
+                    , UndecidableInstances
+  build-depends:      base >=4.10 && <4.11, text
+  default-language:   Haskell2010
+#+end_src
+
+#+begin_src haskell :tangle Monoiad.hs
+module Monoiad where
+
+import Prelude hiding (Category(..), Monoid(..), product)
+#+end_src
+
+* The Monoiad
+
+*monoid*: a category with a single object
+
+*-ad*: an epic poem, usually with a cyclical journey of discovery
+
+*monad*: a monoid in the category of endofunctors
+
+* /in media res/
+
+#+begin_src haskell
+let nums = [8, 2, 4, 5, -2, 8, 3]
+in fold nums
+
+⇒     -2
+⇒      8
+⇒     28
+⇒ -15360
+#+end_src
+
+** where do these answers come from?
+
+#+begin_src haskell
+foldr min maxBound nums
+foldr max minBound nums
+foldr (+) 0        nums
+foldr (*) 1        nums
+#+end_src
+
+* What’s a monoid?
+
+** in abstract algebra
+
+#+begin_src haskell
+class Monoid a where
+  product :: a -> a -> a
+  unit :: a
+#+end_src
+
+** in abstract algebra
+
+#+begin_src haskell :tangle Monoiad.hs
+class Monoid a where
+  product :: a -> a -> a
+  unit :: a
+
+associativity :: (Eq a, Monoid a) => a -> a -> a -> Bool
+associativity x y z =
+  product (product x y) z == product x (product y z)
+leftIdentity :: (Eq a, Monoid a) => a -> Bool
+leftIdentity x = product unit x == x
+rightIdentity :: (Eq a, Monoid a) => a -> Bool
+rightIdentity x = product x unit == x
+#+end_src
+
+#+begin_src haskell :tangle Monoiad.hs
+fold :: Monoid a => [a] -> a
+fold = foldr product unit
+#+end_src
+
+:speakernotes:
+where the product is closed (total), associative, and the unit is both the left and right identity of the product
+
+Ok, that’s everything. You totally get monoids now. Thanks for coming.
+:END:
+
+*** Some examples?
+
+**** ~Bool~
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Conjunction.hs
+module Monoiad.Instances.Conjunction where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Conjunction.hs
+instance Monoid Bool where
+  product = (&&)
+  unit = True
+
+-- True && (False && True) == False == (True && False) && True
+-- False && True == False == True && False
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Disjunction.hs
+module Monoiad.Instances.Disjunction where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Disjunction.hs
+instance Monoid Bool where
+  product = (||)
+  unit = False
+
+-- True || (False || True) == True == (True || False) || True
+-- True || False == True == False || True
+#+end_src
+
+**** ~Int~
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Add.hs
+module Monoiad.Instances.Add where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Add.hs
+instance Monoid Int where
+  product = (+)
+  unit = 0
+
+-- 4 + (2 + 3) == 9 == (4 + 2) + 3
+-- 7 + 0 == 7 == 0 + 7
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Multiply.hs
+module Monoiad.Instances.Multiply where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Multiply.hs
+instance Monoid Int where
+  product = (*)
+  unit = 1
+
+-- 4 * (2 * 3) == 24 == (4 * 2) * 3
+-- 7 * 1 == 7 == 1 * 7
+#+end_src
+
+**** ~Int~ (continued)
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Max.hs
+module Monoiad.Instances.Max where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Max.hs
+instance Monoid Int where
+  product = max
+  unit = minBound
+
+-- max 12 (max 7 32) == 32 == max (max 12 7) 32
+-- max 26 minBound == 26 == max minBound 26
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Min.hs
+module Monoiad.Instances.Min where
+import Monoiad
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/Min.hs
+instance Monoid Int where
+  product = min
+  unit = maxBound
+
+-- min 12 (min 7 32) == 7 == min (min 12 7) 32
+-- min 26 maxBound == 26 == min maxBound 26
+#+end_src
+
+**** ~String~
+
+#+begin_src haskell :tangle Monoiad.hs
+instance Monoid [Char] where
+  product = (++)
+  unit = ""
+
+-- "mon" ++ ("oi" ++ "ad") == "monoiad" == ("mon" ++ "oi") ++ "ad"
+-- "foo" ++ "" == "foo" == "" ++ "foo"
+#+end_src
+
+* Why do we care?
+
+- concepts that transcend languages
+- monoids are at a “sweet spot”
+- concurrency
+
+*** generalizing
+
+    :speakernotes:
+So, all of these things fit that ~trait~ I put up before, but let’s take a step back.
+
+A ⊗ A → A
+η → A
+
+∀x, y, z ∈ A
+(x ⊗ y) ⊗ z ≅ x ⊗ (y ⊗ z)
+η ⊗ x ≅ x ≅ x ⊗ η
+
+(a, ⊗, μ)
+
+This definition is a bit more abstract, and so maybe it can help us think of cases that aren’t /quite/ instances of that type class.
+
+And we weaken the equality of our laws to /isomorphism/. And what is isomorphism?
+:END:
+
+#+begin_src haskell :tangle Monoiad/Isomorphic.hs
+module Monoiad.Isomorphic where
+import Data.Text
+import Data.Void
+import Prelude hiding (Monoid(..), product)
+
+data Iso arr a b =
+  Isomorphism { apply :: arr a b, unapply :: arr b a }
+
+textToString :: Iso (->) Text String
+textToString = Isomorphism unpack pack
+#+end_src
+
+#+begin_src haskell
+"monoiad" /= ['m', 'o', 'n', 'o', 'i', 'a', 'd']
+#+end_src
+
+*** now we can do this …
+
+#+begin_src haskell
+class Monoid a where
+  product :: a -> a -> a
+  unit :: a
+
+associativity :: (Eq a, Monoid a) => a -> a -> a -> Bool
+associativity x y z =
+  product (product x y) z == product x (product y z)
+leftIdentity :: (Eq a, Monoid a) => a -> Bool
+leftIdentity x = product unit x == x
+leftIdentity :: (Eq a, Monoid a) => a -> Bool
+leftIdentity x = product x unit == x
+#+end_src
+
+*** at the type level
+
+#+begin_src haskell :tangle Monoiad.hs
+class TMonoid (arr :: k -> k -> *) where
+  type Product arr :: k -> k -> k
+  type Unit arr :: k
+#+end_src
+
+*** at the type level
+
+#+begin_src haskell :tangle Monoiad/Isomorphic.hs
+class TMonoid (arr :: k -> k -> *) where
+  type Product arr :: k -> k -> k
+  type Unit arr :: k
+
+  associativity :: Iso arr (Product arr (Product arr a b) c)
+                           (Product arr a (Product arr b c))
+  leftIdentity :: Iso arr (Product arr (Unit arr) x) x
+
+  rightIdentity :: Iso arr (Product arr x (Unit arr)) x
+#+end_src
+
+*** at the type level
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Cartesian.hs
+module Monoiad.Instances.Cartesian where
+import Monoiad.Isomorphic
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+#+begin_src haskell :tangle Monoiad/Instances/Cartesian.hs
+instance TMonoid (->) where
+  type Product (->) = (,)
+  type Unit (->) = ()
+
+  associativity :: Iso (->) ((a, b), c) (a, (b, c))
+  associativity = Isomorphism undefined undefined
+  leftIdentity :: Iso (->) ((), a) a
+  leftIdentity = Isomorphism snd ((,) ())
+  rightIdentity :: Iso (->) (a, ()) a
+  rightIdentity = Isomorphism fst (flip (,) ())
+#+end_src
+
+*** at the type level
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Cocartesian.hs
+module Monoiad.Instances.Cocartesian where
+import Data.Void
+import Monoiad.Isomorphic
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+#+begin_src haskell :tangle Monoiad/Instances/Cocartesian.hs
+instance TMonoid (->) where
+  type Product (->) = Either
+  type Unit (->) = Void
+
+  associativity :: Iso (->) (Either (Either a b) c)
+                            (Either a (Either b c))
+  associativity = Isomorphism undefined undefined
+  leftIdentity :: Iso (->) (Either Void a) a
+  leftIdentity = Isomorphism (either absurd id) Right
+  rightIdentity :: Iso (->) (Either a Void) a
+  rightIdentity = Isomorphism (either id absurd) Left
+#+end_src
+
+** in category theory
+
+   :speakernotes:
+#+begin_src haskell :tangle Monoiad/Category.hs
+module Monoiad.Category where
+import Data.Functor.Compose
+import Data.Functor.Identity
+import Data.Void
+import Monoiad.Isomorphic hiding (Monoid(..))
+import Prelude hiding (Monad(..), Monoid(..), product)
+#+end_src
+   :END:
+#+begin_src haskell :tangle Monoiad/Category.hs
+class Category arr where
+  compose :: arr b c -> arr a b -> arr a c
+
+  identity :: arr a a
+#+end_src
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+instance Category (->) where
+  compose :: (b -> c) -> (a -> b) -> (a -> c)
+  compose f g = \x -> f (g x)
+  identity :: a -> a
+  identity = \x -> x
+#+end_src
+
+*** a category with one object
+
+[[file:context.png]]
+(stolen from Emily Riehl’s [[https://golem.ph.utexas.edu/category/2016/11/category_theory_in_context.html][Category Theory in Context]])
+
+*** monoid object in a monoidal category
+
+**** monoids all the way down
+
+:speakernotes:
+Let’s take a step back to (*, Tuple2, Unit) and our original type class definition:
+:END:
+
+#+begin_src haskell
+class Monoid a where
+  product :: a -> a -> a
+  unit :: a
+#+end_src
+
+**** monoids all the way down
+
+:speakernotes:
+but now let’s use the “proper” definition I mentioned …
+:END:
+
+#+begin_src haskell
+class Monoid a where
+  product :: a -> a -> a
+  unit :: () -> a
+#+end_src
+
+**** monoids all the way down
+
+:speakernotes:
+and tweak it once more …
+:END:
+
+#+begin_src haskell
+class Monoid a where
+  product :: (a, a) -> a
+  unit :: () -> a
+#+end_src
+
+**** monoids all the way down
+
+:speakernotes:
+and tweak it once more …
+:END:
+
+#+begin_src haskell
+class Monoid a where
+  product :: (a, a) -> a
+  unit :: () -> a
+#+end_src
+
+#+begin_src haskell
+instance TMonoid (->) where
+  type Product (->) = (,)
+  type Unit (->) = ()
+#+end_src
+
+**** monoids all the way down
+
+    :speakernotes:
+Do you notice anything?
+
+The argument to each function is respectively the ~Product~ and ~Unit~ of our type-level ~Cartesian~ instance.
+
+So, we can make that explicit …
+    :END:
+
+#+begin_src haskell :tangle Monoiad/Isomorphic.hs
+class TMonoid arr => Monoid arr a where
+  product :: arr (Product arr a a) a
+  unit :: arr (Unit arr) a
+#+end_src
+
+#+begin_src haskell :tangle Monoiad/Instances/Cartesian.hs
+instance Monoid (->) Bool where
+  product p = fst p && snd p
+  unit _ = True
+#+end_src
+
+#+begin_src haskell :tangle Monoiad/Instances/Cocartesian.hs
+instance Monoid (->) a where
+  product :: Either a a -> a
+  product = either id id
+  unit :: Void -> a
+  unit = absurd
+#+end_src
+
+:speakernotes:
+So now we have some notion of “a monoid object in a type-level monoid”, yeah?
+:END:
+
+**** categories
+
+#+begin_src haskell
+class Category arr where
+  compose :: arr b c -> arr a b -> arr a c
+
+  identity :: arr a a
+#+end_src
+
+**** monoidal categories
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+type MonoidalCategory arr = (TMonoid arr, Category arr)
+#+end_src
+
+**** monoid object in a monoidal category
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+class MonoidalCategory arr => Monoid arr a where
+  product :: arr (Product arr a a) a
+  unit :: arr (Unit arr) a
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/CatCartesian.hs
+module Monoiad.Instances.CatCartesian where
+import Monoiad.Category
+import Monoiad.Instances.Cartesian
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+#+begin_src haskell :tangle Monoiad/Instances/CatCartesian.hs
+instance Monoid (->) Bool where
+  product p = fst p && snd p
+  unit _ = True
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/CatCocartesian.hs
+module Monoiad.Instances.CatCocartesian where
+import Data.Void
+import Monoiad.Category
+import Monoiad.Instances.Cocartesian
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+#+begin_src haskell :tangle Monoiad/Instances/CatCocartesian.hs
+instance Monoid (->) a where
+  product = either id id
+  unit :: Void -> a
+  unit = absurd
+#+end_src
+
+*** other monoidal categories
+
+**** ~Op~
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+newtype Op arr a b = Op { unOp :: arr b a }
+
+instance Category arr => Category (Op arr) where
+  compose f g = Op (compose (unOp g) (unOp f))
+  identity = Op identity
+
+instance TMonoid arr => TMonoid (Op arr) where
+  type Product (Op arr) = Product arr
+  type Unit (Op arr) = Unit arr
+
+  associativity = Isomorphism (Op (unapply associativity))
+                              (Op (apply associativity))
+  leftIdentity = Isomorphism (Op (unapply leftIdentity))
+                             (Op (apply leftIdentity))
+  rightIdentity = Isomorphism (Op (unapply rightIdentity))
+                              (Op (apply rightIdentity))
+#+end_src
+
+**** ~Op~
+
+#+begin_src haskell :tangle Monoiad/Instances/CatCartesian.hs
+instance Monoid (Op (->)) a where
+  -- :: a -> (a, a)
+  product = Op (\x -> (x, x))
+  -- :: a -> ()
+  unit = Op (const ())
+#+end_src
+
+:speakernotes:
+This is mostly useful in a language with linear types. So, a comonoid (or in general, any co-thing) is a monoid in the opposite (or dual) category.
+:END:
+
+**** type constructors
+
+:speakernotes:
+Unfortunately, Scala doesn’t make it easy to abstract over all of these things, but we can use some consistent naming to approximate it.
+
+- ([*] → *, cats.data.Compose, cats.Identity)
+
+Compose[F[_], G[_], A] ≅ F[G[A]]
+Identity[A] ≅ A
+
+Compose[Compose[List, Set, ?], Maybe, ?] ≅ Compose[List, Compose[Set, Maybe, ?], ?] // ≅ List[Set[Maybe[A]]]
+Compose[Identity, List, ?] ≅ List ≅ Compose[List, Identity, ?]
+
+This has been happening behind the scenes mostly so far, but we’ll discuss it now as we start to use it in earnest.
+:END:
+
+#+begin_src haskell
+{-# language PolyKinds #-}
+#+end_src
+
+:speakernotes:
+We will stare at this slide for a while … maybe bounce between it and ~TMonoid~ a few times to understand the parallel.
+:END:
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+data (f :: * -> *) ~> (g :: * -> *) =
+  NT { unNT :: forall a. f a -> g a }
+
+instance TMonoid (~>) where
+  type Product (~>) = Compose
+  type Unit (~>) = Identity
+
+  -- Compose (Compose f g) h ≅ Compose f (Compose g h)
+  associativity = Isomorphism undefined undefined
+  -- Compose Identity F ≅ F ≅ Compose F Identity
+  leftIdentity = Isomorphism (NT (runIdentity . getCompose))
+                             (NT (Compose . Identity))
+  rightIdentity = Isomorphism undefined undefined
+#+end_src
+
+*** ~Monad~
+
+“a monad is a monoid in the category of endofunctors”
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+type Monad m = (Functor m, Monoid (~>) m)
+-- product :: forall a. Compose m m a -> m a -- join
+-- unit :: forall a. Identity a -> m a       -- return
+
+mjoin :: Monad m => m (m a) -> m a
+mjoin = unNT product . Compose
+return :: Monad m => a -> m a
+return = unNT unit . Identity
+(>>=) :: Monad m => m a -> (a -> m b) -> m b
+ma >>= f = mjoin (fmap f ma)
+#+end_src
+
+:speakernotes:
+And here, we’ll have to specialize ~MonoidF~ to ~Monad~, and then show how ~flatMap~ can be implemented … and explain why we get ~map~ “for free”.
+:END:
+
+* Too Many Monoids!
+
+:speakernotes:
+They’re easy to create out of thin air.
+:END:
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/First.hs
+module Monoiad.Instances.First where
+import Monoiad.Category
+import Monoiad.Instances.Cartesian
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+
+#+begin_src haskell :tangle Monoiad/Instances/First.hs
+instance Eq a => Monoid (->) a where
+  product (x, y) = if x == unit () then y else x
+  unit = undefined -- any value of type `a`
+#+end_src
+
+:speakernotes:
+#+begin_src haskell :tangle Monoiad/Instances/Last.hs
+module Monoiad.Instances.Last where
+import Monoiad.Category
+import Monoiad.Instances.Cartesian
+import Prelude hiding (Monoid(..), product)
+#+end_src
+:END:
+#+begin_src haskell :tangle Monoiad/Instances/Last.hs
+instance Eq a => Monoid (->) a where
+  product (x, y) = if y == unit () then x else y
+  unit = undefined -- any value of type `a`
+#+end_src
+
+:speakernotes:
+Basically, anything you might pass to ~foldRight~.
+:END:
+
+** “strengthening” monoids
+
+   :speakernotes:
+#+begin_src dot :file monoids.png
+digraph "" {
+  rankdir=BT
+  bgcolor=transparent
+
+  Monoid [style=bold]
+
+  Semigroup -> magma
+  quasigroup -> magma [color=orange]
+  loop -> quasigroup [color=red]
+  CommutativeSemigroup -> Semigroup [color=blue]
+  Monoid -> Semigroup [color=red]
+  Band -> Semigroup [color=purple]
+  CommutativeMonoid -> CommutativeSemigroup [color=red]
+  CommutativeMonoid -> Monoid [color=blue]
+  Semilattice -> CommutativeSemigroup [color=purple]
+  Semilattice -> Band [color=blue]
+  Group -> Monoid [color=orange]
+  Group -> loop
+  CommutativeGroup -> Group [color=blue]
+  CommutativeGroup -> CommutativeMonoid [color=orange]
+  BoundedSemilattice -> Semilattice [color=red]
+  BoundedSemilattice -> CommutativeMonoid [color=purple]
+}
+#+end_src
+   :END:
+
+#+RESULTS:
+[[file:monoids.png]]
+
+- associativity – black
+- identity – red
+- commutativity – ~+~, ~*~, ~max~ (but not String concatenation) – blue
+- idempotency – ~max~, ~mix~ (but not ~+~, ~*~) – purple
+- invertible – ~+~ for ℤ (but not for ℕ) – orange
+
+** renaming monoids
+
+- Monad (kind polymorphism)
+- Alternative (quantified constraints)
+- Comonoid
+
+
+** relating monoids
+
+   :speakernotes:
+As we’ve already seen, you often have multiple instances for a single type. This is a pretty contentious aspect of type classes. There are a number of approaches for dealing with this, and I’m not here to advocate for any of them in particular. But I /am/ here to show that they’re not just “different” instances, but rather a set of instances that have particular relationshps to each other.
+   :END:
+
+** ~Rig~
+
+   :speakernotes:
+A ring without “negation” (i.e., no subtraction)
+   :END:
+
+#+begin_src haskell :tangle Monoiad/Isomorphic.hs
+newtype Additive arr a b = Add { sum :: arr a b }
+newtype Multiplicative arr a b = Multiply { prod :: arr a b }
+
+class (TMonoid (Additive arr), TMonoid (Multiplicative arr)) => TRig arr where
+  type Add arr a b
+  type Add arr a b = Product (Additive arr) a b
+  type Zero arr
+  type Zero arr = Unit (Additive arr)
+  type Multiply arr a b
+  type Multiply arr a b = Product (Multiplicative arr) a b
+  type One arr
+  type One arr = Unit (Multiplicative arr)
+#+end_src
+
+** ~Rig~
+
+#+begin_src haskell :tangle Monoiad/Isomorphic.hs
+  distribute
+    :: Iso arr (Multiply arr a (Add arr b c))
+               (Add arr (Multiply arr a b) (Multiply arr a c))
+  leftAnnihilate :: Iso arr (Multiply arr (Zero arr) a) (Zero arr)
+  rightAnnihilate :: Iso arr (Multiply arr a (Zero arr)) (Zero arr)
+#+end_src
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+type RigCategory arr = (TRig arr, Category arr)
+#+end_src
+
+*** *Set*
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+instance TMonoid (Additive (->)) where
+  type Product (Additive (->)) = Either
+  type Unit (Additive (->)) = Void
+  associativity = Isomorphism undefined undefined
+  leftIdentity = Isomorphism (Add (either absurd id)) (Add Right)
+  rightIdentity = Isomorphism (Add (either id absurd)) (Add Left)
+
+instance TMonoid (Multiplicative (->)) where
+  type Product (Multiplicative (->)) = (,)
+  type Unit (Multiplicative (->)) = ()
+  associativity = Isomorphism undefined undefined
+  leftIdentity = Isomorphism (Multiply snd) (Multiply ((,) ()))
+  rightIdentity =
+    Isomorphism (Multiply fst) (Multiply (flip (,) ()))
+#+end_src
+
+*** *Set*
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+instance TRig (->) where
+  distribute :: Iso (->) (a, Either b c) (Either (a, b) (a, c))
+  distribute = Isomorphism
+    (\case
+        (a, Left b) -> Left (a, b)
+        (a, Right c) -> Right (a, c))
+    (\case
+        Left (a, b) -> (a, Left b)
+        Right (a, c) -> (a, Right c))
+  leftAnnihilate :: Iso (->) (Void, a) Void
+  leftAnnihilate = Isomorphism fst absurd
+  rightAnnihilate :: Iso (->) (a, Void) Void
+  rightAnnihilate = Isomorphism snd absurd
+#+end_src
+
+** ~BoundedLattice~
+
+   :speakernotes:
+A pair of bounded semilattices, where each distributes over the other, and each identity annihilates the other. You can actually extract two rigs out of this – one each with the meet and join being either position.
+   :END:
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+newtype Meet a = Meet { meet' :: a }
+newtype Join a = Join { join' :: a }
+
+class ( MonoidalCategory arr
+      , Monoid arr (Meet l), Monoid arr (Join l)
+      ) => BoundedLattice arr l where
+  meet :: arr (Product k l l) l
+  minimum :: arr (Unit k) l
+  join :: arr (Product k l l) l
+  maximum :: arr (Unit k) l
+#+end_src
+
+** duoids
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+newtype Diamond arr a b = Diamond { diamond :: arr a b }
+newtype Star arr a b = Star { star :: arr a b }
+
+class (TMonoid (Diamond arr), TMonoid (Star arr)) => TDuoid arr where
+  type ProductD arr :: k -> k -> k
+  type ProductD arr = Product (Diamond arr)
+  type UnitD arr :: k
+  type UnitD arr = Unit (Diamond arr)
+  type ProductS arr :: k -> k -> k
+  type ProductS arr = Product (Star arr)
+  type UnitS arr :: k
+  type UnitS arr = Unit (Star arr)
+#+end_src
+
+** duoids
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+  swap :: arr (ProductD arr (ProductS arr a b) (ProductS arr c d))
+              (ProductS arr (ProductD arr a c) (ProductD arr b d))
+  split :: arr (UnitD arr) (ProductS arr (UnitD arr) (UnitD arr))
+  merge :: arr (ProductD arr (UnitS arr) (UnitS arr)) (UnitS arr)
+  switch :: arr (UnitD arr) (UnitS arr)
+#+end_src
+
+*** *Endofunctors*
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+data Day f g c = forall a b. Day (a -> b -> c)   (f a)  (g b)
+--    liftA2 :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
+
+instance TMonoid (Diamond (~>)) where
+  type Product (Diamond (~>)) = Day
+  type Unit (Diamond (~>)) = (->) ()
+  associativity = Isomorphism undefined undefined
+  leftIdentity = Isomorphism undefined undefined
+  rightIdentity = Isomorphism undefined undefined
+
+instance TMonoid (Star (~>)) where
+  type Product (Star (~>)) = Compose
+  type Unit (Star (~>)) = Identity
+  associativity = undefined undefined
+  leftIdentity = Isomorphism undefined undefined
+  rightIdentity = Isomorphism undefined undefined
+#+end_src
+
+*** *Endofunctors*
+
+#+begin_src haskell :tangle Monoiad/Category.hs
+instance TDuoid (~>) where
+  swap :: Day (Compose f g) (Compose h i)
+       ~> Compose (Day f h) (Day g i)
+  swap = undefined
+  split :: (->) () ~> Compose ((->) ()) ((->) ())
+  split = undefined
+  merge :: Day Identity Identity ~> Identity
+  merge = undefined
+  switch :: (->) () ~> Identity
+  switch = NT (\f -> Identity (f ()))
+#+end_src
+
+*** other duoids
+
+- parallel & sequential applicative instances
+- ~overlay~ & ~connect~ algebraic graph operations
+
+** etc.
+- bimonoids
+- meadow
+- tropical semiring
+- boolean algebra(?)
+
+* and back home again
+
+#+begin_src haskell
+class Category arr where
+  compose :: arr b c -> arr a b -> arr a c
+  identity :: arr a a
+#+end_src
+
+* and back home again
+
+#+begin_src haskell
+class Category arr where
+  compose :: arr b c -> arr a b -> arr a c
+  identity :: arr a a
+#+end_src
+
+#+begin_src haskell
+class Monoid a where
+  product :: a -> a -> a
+  unit :: a
+#+end_src
+
+* and back home again
+
+#+begin_src haskell
+class Category arr where
+  compose :: forall a b. (forall z. (arr z b, arr a z)) -> arr a b
+  identity :: arr a a
+#+end_src
+
+#+begin_src haskell
+class Monoid a where
+  product :: (a, a) -> a
+  unit :: a
+#+end_src
+
+* Summary
+
+- a monoid is some closed associative operation with an identity
+- monoids show up everywhere (and way too often)
+- we can best understand “important” monoids in terms of
+  - what additional properties they have
+  - how they relate to other monoids
+- monoids are often hidden behind other interpretations
+
+* Thanks!
+
+- Nathan Faubion for the typo that led to the name/structure of this talk.
+- Andrey Mokhov – https://blogs.ncl.ac.uk/andreymokhov/united-monoids/
+- many others for feedback on this talk, as well as helping me learn all this in the first place
+
+** References
+
+- this talk – https://github.com/sellout/category-parametric-talk/monoiad/
+- Caterwaul – https://github.com/sellout/caterwaul
+- Cheshire – https://github.com/sellout/cheshire
+- Seven Sketches in Compositionality
+- Category Theory in Context – https://golem.ph.utexas.edu/category/2016/11/category_theory_in_context.html
+- nLab – https://ncatlab.org/nlab
