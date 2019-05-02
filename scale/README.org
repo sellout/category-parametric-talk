@@ -6,7 +6,8 @@
 #+epresent_format_latex_scale: 4
 #+epresent_frame_level: 4
 #+epresent_hide_outline: t
-#+epresent_mode_line: (" @sellout — greg@technomadic.org — Duality & Delete Your Code                       " (:eval (int-to-string epresent-page-number))) 
+#+epresent_mode_line: (" @sellout — greg@technomadic.org — Duality & Delete Your Code                       " (:eval (int-to-string epresent-page-number)))
+#+latex_header: \usepackage{tikz-cd}
 
 [[file:spock.jpg]]
 
@@ -96,7 +97,9 @@ import cats.implicits._
 
 * of course …
 
-[[file:cata.png]]
+\begin{tikzcd}
+cata
+\end{tikzcd}
 
 ** folds
 
@@ -133,7 +136,9 @@ object Natural {
 
 ** folds
 
-[[file:cata.png]]
+\begin{tikzcd}
+cata
+\end{tikzcd}
 
 ** and unfolds
 
@@ -154,7 +159,9 @@ trait Corecursive[T, F[_]] {
 
 ** and unfolds
 
-[[file:plus-ana.png]]
+\begin{tikzcd}
+cata \ar[rr] & & ana
+\end{tikzcd}
 
 ** with variations
 
@@ -180,7 +187,13 @@ trait Recursive[T, F[_]] {
 
 ** with variations
 
-[[file:plus-variants.png]]
+\begin{tikzcd}
+histo \ar[rr, crossing over]                & & futu                            & \\
+                                                                                  \\
+cata \ar[uu] \ar[dd] \ar[rr, crossing over] & & ana \ar[uu, crossing over]      & \\
+                                                                                  \\
+para \ar[rr]                                & & apo \ar[from=uu, crossing over] &
+\end{tikzcd}
 
 ** and monads
 
@@ -202,7 +215,14 @@ trait Recursive[T, F[_]] {
 
 ** and monads
 
-[[file:plus-monads.png]]
+\begin{tikzcd}
+                        & histoM \ar[from=dd] \ar[rr] &                    & futuW                \\
+histo \ar[rr, crossing over] \ar[ur] &                & futu \ar[ur]       &                      \\
+                        & cataM \ar[dd] \ar[rr]       &                    & anaW \ar[uu] \ar[dd] \\
+cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &      \\
+                        & paraM \ar[rr]               &                    & apoW                 \\
+para \ar[rr] \ar[ur]    &                             & apo \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 ** and beyond
 
@@ -231,7 +251,14 @@ trait RecursiveB[T[_, _], F[_[_, _], _, _]] {
 
 ** and beyond
 
-[[file:plus-kinds.png]]
+\begin{tikzcd}[cramped, column sep=small]
+                        & histoMK \ar[from=dd] \ar[rr] &                    & futuWK                &                         & histoM \ar[from=dd] \ar[rr] &                    & futuW                &                         & histoMA \ar[from=dd] \ar[rr] &                    & futuWA                \\
+histoK \ar[rr, crossing over] \ar[ur] &                & futuK \ar[ur]      &                       & histo \ar[rr, crossing over] \ar[ur] &                & futu \ar[ur]       &                      & histoA \ar[rr, crossing over] \ar[ur] &                & futuA \ar[ur]      &                       \\
+                        & cataMK \ar[dd] \ar[rr]       &                    & anaWK \ar[uu] \ar[dd] &                         & cataM \ar[dd] \ar[rr]       &                    & anaW \ar[uu] \ar[dd] &                         & cataMA \ar[dd] \ar[rr]       &                    & anaWA \ar[uu] \ar[dd] \\
+cataK \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaK \ar[uu, crossing over] \ar[ur] &      & cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &      & cataA \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaA \ar[uu, crossing over] \ar[ur] &      \\
+                        & paraMK \ar[rr]               &                    & apoWK                 &                         & paraM \ar[rr]               &                    & apoW                 &                         & paraMA \ar[rr]               &                    & apoWA                 \\
+paraK \ar[rr] \ar[ur]   &                              & apoK \ar[from=uu, crossing over] \ar[ur] & & para \ar[rr] \ar[ur]    &                             & apo \ar[from=uu, crossing over] \ar[ur] & & paraA \ar[rr] \ar[ur]   &                              & apoA \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 * Other dimensions
 [[file:tesseract.png]]
@@ -293,11 +320,18 @@ trait Recursive[T, F[_]] {
 
 * Getting Back
 
-[[file:plus-kinds.png]]
-
 :speakernotes:
 So look at this. It’s a mess – this kind of thing used to make me feel ill. But I’ve found a bunch of ways to bring it back under control!
 :END:
+
+\begin{tikzcd}[cramped, column sep=small]
+                        & histoMK \ar[from=dd] \ar[rr] &                    & futuWK                &                         & histoM \ar[from=dd] \ar[rr] &                    & futuW                &                         & histoMA \ar[from=dd] \ar[rr] &                    & futuWA                \\
+histoK \ar[rr, crossing over] \ar[ur] &                & futuK \ar[ur]      &                       & histo \ar[rr, crossing over] \ar[ur] &                & futu \ar[ur]       &                      & histoA \ar[rr, crossing over] \ar[ur] &                & futuA \ar[ur]      &                       \\
+                        & cataMK \ar[dd] \ar[rr]       &                    & anaWK \ar[uu] \ar[dd] &                         & cataM \ar[dd] \ar[rr]       &                    & anaW \ar[uu] \ar[dd] &                         & cataMA \ar[dd] \ar[rr]       &                    & anaWA \ar[uu] \ar[dd] \\
+cataK \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaK \ar[uu, crossing over] \ar[ur] &      & cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &      & cataA \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaA \ar[uu, crossing over] \ar[ur] &      \\
+                        & paraMK \ar[rr]               &                    & apoWK                 &                         & paraM \ar[rr]               &                    & apoW                 &                         & paraMA \ar[rr]               &                    & apoWA                 \\
+paraK \ar[rr] \ar[ur]   &                              & apoK \ar[from=uu, crossing over] \ar[ur] & & para \ar[rr] \ar[ur]    &                             & apo \ar[from=uu, crossing over] \ar[ur] & & paraA \ar[rr] \ar[ur]   &                              & apoA \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 ** comonadic folds
 
@@ -357,15 +391,32 @@ trait Recursive[T, F[_]] {
 
 ** comonadic folds
 
-[[file:plus-kinds.png]]
+\begin{tikzcd}[cramped, column sep=small]
+                        & histoMK \ar[from=dd] \ar[rr] &                    & futuWK                &                         & histoM \ar[from=dd] \ar[rr] &                    & futuW                &                         & histoMA \ar[from=dd] \ar[rr] &                    & futuWA                \\
+histoK \ar[rr, crossing over] \ar[ur] &                & futuK \ar[ur]      &                       & histo \ar[rr, crossing over] \ar[ur] &                & futu \ar[ur]       &                      & histoA \ar[rr, crossing over] \ar[ur] &                & futuA \ar[ur]      &                       \\
+                        & cataMK \ar[dd] \ar[rr]       &                    & anaWK \ar[uu] \ar[dd] &                         & cataM \ar[dd] \ar[rr]       &                    & anaW \ar[uu] \ar[dd] &                         & cataMA \ar[dd] \ar[rr]       &                    & anaWA \ar[uu] \ar[dd] \\
+cataK \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaK \ar[uu, crossing over] \ar[ur] &      & cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &      & cataA \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & anaA \ar[uu, crossing over] \ar[ur] &      \\
+                        & paraMK \ar[rr]               &                    & apoWK                 &                         & paraM \ar[rr]               &                    & apoW                 &                         & paraMA \ar[rr]               &                    & apoWA                 \\
+paraK \ar[rr] \ar[ur]   &                              & apoK \ar[from=uu, crossing over] \ar[ur] & & para \ar[rr] \ar[ur]    &                             & apo \ar[from=uu, crossing over] \ar[ur] & & paraA \ar[rr] \ar[ur]   &                              & apoA \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 ** comonadic folds
 
-[[file:minus-variants.png]]
+\begin{tikzcd}[cramped, column sep=small]
+                        & cataMK \ar[rr]       &                    & anaWK &                         & cataM \ar[rr]       &                    & anaW &                         & cataMA \ar[rr]       &                    & anaWA \\
+cataK \ar[rr, crossing over] \ar[ur] & & anaK \ar[ur] &      & cata \ar[rr, crossing over] \ar[ur] & & ana \ar[ur] &      & cataA \ar[rr, crossing over] \ar[ur] & & anaA \ar[ur] &      \\
+\end{tikzcd}
 
 ** comonadic folds
 
-[[file:reorg.png]]
+\begin{tikzcd}
+                        & cataMK \ar[from=dd] \ar[rr] &                     & anaWK                \\
+cataK \ar[rr, crossing over] \ar[ur] &                & anaK \ar[ur]        &                      \\
+                        & cataM \ar[dd] \ar[rr]       &                     & anaW \ar[uu] \ar[dd] \\
+cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &       \\
+                        & cataMB \ar[rr]              &                     & anaWB                \\
+cataB \ar[rr] \ar[ur]   &                             & anaB \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 ** categories
 :speakernotes:
@@ -400,11 +451,25 @@ object category {
 
 ** categories
 
-[[file:reorg.png]]
+\begin{tikzcd}
+                        & cataMK \ar[from=dd] \ar[rr] &                     & anaWK                \\
+cataK \ar[rr, crossing over] \ar[ur] &                & anaK \ar[ur]        &                      \\
+                        & cataM \ar[dd] \ar[rr]       &                     & anaW \ar[uu] \ar[dd] \\
+cata \ar[uu] \ar[dd] \ar[rr, crossing over] \ar[ur] & & ana \ar[uu, crossing over] \ar[ur] &       \\
+                        & cataMB \ar[rr]              &                     & anaWB                \\
+cataB \ar[rr] \ar[ur]   &                             & anaB \ar[from=uu, crossing over] \ar[ur] &
+\end{tikzcd}
 
 ** categories
 
-[[file:minus-monads.png]]
+\begin{tikzcd}
+                                                     \\
+cataK \ar[rr]                & & anaK              & \\
+                                                     \\
+cata \ar[uu] \ar[dd] \ar[rr] & & ana \ar[uu]       & \\
+                                                     \\
+cataB \ar[rr]                & & anaB \ar[from=uu] &
+\end{tikzcd}
 
 ** duality
 :speakernotes:
@@ -454,11 +519,24 @@ But we now have a problem with naming …
 
 ** duality
 
-[[file:minus-monads.png]]
+\begin{tikzcd}
+histo \ar[rr, crossing over]                & & futu                            & \\
+                                                                                  \\
+cata \ar[uu] \ar[dd] \ar[rr, crossing over] & & ana \ar[uu, crossing over]      & \\
+                                                                                  \\
+para \ar[rr]                                & & apo \ar[from=uu, crossing over] &
+\end{tikzcd}
 
 ** duality
 
-[[file:minus-duals.png]]
+\begin{tikzcd}
+                           \\
+cataK                & & & \\
+                           \\
+cata \ar[uu] \ar[dd] & & & \\
+                           \\
+cataB                & & &
+\end{tikzcd}
 
 ** kind polymorphism
 
@@ -509,11 +587,20 @@ trait Recursive[⟶[_ <: AnyKind, _ <: AnyKind],
 
 ** kind polymorphism
 
-[[file:minus-duals.png]]
+\begin{tikzcd}
+                           \\
+cataK                & & & \\
+                           \\
+cata \ar[uu] \ar[dd] & & & \\
+                           \\
+cataB                & & &
+\end{tikzcd}
 
 ** kind polymorphism
    
-[[file:cata.png]]
+\begin{tikzcd}
+cata
+\end{tikzcd}
 
 ** abstraction
 
